@@ -31,7 +31,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 .sheetHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.sheetHead strong{font-size:15px}
 .step,.placeItem,.historyItem{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.4}.stepIcon{width:25px;text-align:center;font-size:18px}.muted{color:var(--muted)}
 .routeChoice{margin-top:7px;padding:9px;border:1px solid var(--border);border-radius:9px;font-size:12px;cursor:pointer}.routeChoice.selected{border-color:var(--blue);background:#eff6ff}
-.carMarker{width:34px;height:44px;position:relative;filter:drop-shadow(0 2px 3px #0007)}
+.carMarker{width:34px;height:44px;position:relative;filter:drop-shadow(0 2px 3px #0007)}.carRotate{position:absolute;inset:0;transform-origin:50% 50%}
 .leaflet-marker-icon{background:transparent;border:0}.leaflet-tile-pane.dark-tiles .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.88) contrast(.9)}.carBody{position:absolute;left:6px;top:9px;width:22px;height:29px;border:2px solid white;border-radius:8px 8px 6px 6px;background:#2878f0}.carGlass{position:absolute;left:11px;top:13px;width:12px;height:8px;background:#bfe2ff;border-radius:4px 4px 2px 2px}.carNose{position:absolute;top:0;left:13px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #2878f0}.carLight{position:absolute;left:8px;top:33px;width:4px;height:3px;background:white;box-shadow:14px 0 white}
 @media(max-width:700px){
  #searchPanel{top:9px;left:9px;width:calc(100vw - 18px);padding:10px}
@@ -42,13 +42,15 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  #mapControls .btn{width:38px;height:36px}
  #bottomBar{left:9px;right:55px;bottom:9px;justify-content:flex-start}
  #bottomBar .btn{padding:8px}
- #speedBox{bottom:65px;left:9px}
+ #speedBox{bottom:135px;left:9px}
  #directions,#places,#history{top:9px;right:9px;max-height:calc(100vh - 18px)}
+ #directionsCancel{top:9px;left:9px}
 }
 </style>
 </head>
 <body>
 <div id="map"></div>
+<button class="btn" id="directionsCancel" style="display:none;position:absolute;z-index:9;top:12px;left:12px">✕ Cancel</button>
 
 <section id="searchPanel" class="panel">
  <div class="header"><div><strong>HorizonMaps</strong><br><small>EXPLORE · NAVIGATE</small></div><button class="btn" id="collapseBtn">−</button></div>
@@ -170,7 +172,7 @@ function drawRoutes(){
 function makeCarIcon(){
  return L.divIcon({
   className:"carMarker",
-  html:'<div class="carNose"></div><div class="carBody"></div><div class="carGlass"></div><div class="carLight"></div>',
+  html:'<div class="carRotate"><div class="carNose"></div><div class="carBody"></div><div class="carGlass"></div><div class="carLight"></div></div>',
   iconSize:[34,44],iconAnchor:[17,22]
  });
 }
@@ -178,7 +180,8 @@ function setCar(p){
  if(!S.marker)S.marker=L.marker(p,{icon:makeCarIcon(),interactive:false,zIndexOffset:1000}).addTo(map);
  else S.marker.setLatLng(p);
  const el=S.marker.getElement();
- if(el)el.style.transform="rotate("+S.heading+"deg)";
+ const rotator=el?.querySelector(".carRotate");
+ if(rotator)rotator.style.transform="rotate("+S.heading+"deg)";
 }
 function animate(){
  if(S.target){
@@ -392,8 +395,20 @@ function showSaved(){
 $("saveBtn").onclick=()=>{if(!S.destination){status("Find a destination first.",true);return}if(!S.saved.some(x=>x.label===S.destination.label))S.saved.push(S.destination);localStorage.setItem("horizonmaps_saved",JSON.stringify(S.saved));status("Place saved on this device.")};
 $("savedBtn").onclick=()=>{$("places").style.display="block";showSaved()};
 $("historyBtn").onclick=()=>{$("history").style.display="block";showHistory()};
-$("directionsBtn").onclick=()=>{$("directions").style.display=$("directions").style.display==="block"?"none":"block";renderDirections()};
-document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$(b.dataset.close).style.display="none");
+function closeDirections(){
+ $("directions").style.display="none";
+ $("searchPanel").style.display="";
+ $("directionsCancel").style.display="none";
+}
+$("directionsBtn").onclick=()=>{
+ if($("directions").style.display==="block"){closeDirections();return}
+ $("searchPanel").style.display="none";
+ $("directions").style.display="block";
+ $("directionsCancel").style.display="block";
+ renderDirections();
+};
+$("directionsCancel").onclick=closeDirections;
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const id=b.dataset.close;$(id).style.display="none";if(id==="directions")closeDirections()});
 $("collapseBtn").onclick=()=>{$("searchPanel").classList.toggle("collapsed");$("collapseBtn").textContent=$("searchPanel").classList.contains("collapsed")?"+":"−"};
 
 $("voiceBtn").onclick=()=>{S.voice=!S.voice;$("voiceBtn").textContent=S.voice?"🔊 Voice on":"🔇 Voice off";if(!S.voice&&"speechSynthesis"in window)speechSynthesis.cancel()};
