@@ -30,7 +30,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
         return MessageTemplate.Builder(
             CarText.create("The Android Auto connection is installed. The map screen and turn-by-turn guidance are the next development step.")
         )
-            .setTitle(CarText.create("HorizonMaps"))
+            .setTitle("HorizonMaps")
             .build()
     }
 }
