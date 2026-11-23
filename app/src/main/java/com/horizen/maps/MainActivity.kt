@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
-import android.webkit.SafeBrowsingResponse
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -72,14 +71,6 @@ class MainActivity : Activity() {
                 handler.cancel()
             }
 
-            override fun onSafeBrowsingHit(
-                view: WebView,
-                request: WebResourceRequest,
-                threatType: Int,
-                callback: SafeBrowsingResponse
-            ) {
-                callback.backToSafety(true)
-            }
         }
 
         webView.webChromeClient = object : WebChromeClient() {
