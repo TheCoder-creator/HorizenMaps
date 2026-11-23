@@ -32,7 +32,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 .step,.placeItem,.historyItem{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.4}.stepIcon{width:25px;text-align:center;font-size:18px}.muted{color:var(--muted)}
 .routeChoice{margin-top:7px;padding:9px;border:1px solid var(--border);border-radius:9px;font-size:12px;cursor:pointer}.routeChoice.selected{border-color:var(--blue);background:#eff6ff}
 .carMarker{width:34px;height:44px;position:relative;filter:drop-shadow(0 2px 3px #0007)}
-.leaflet-marker-icon{background:transparent;border:0}.carBody{position:absolute;left:6px;top:9px;width:22px;height:29px;border:2px solid white;border-radius:8px 8px 6px 6px;background:#2878f0}.carGlass{position:absolute;left:11px;top:13px;width:12px;height:8px;background:#bfe2ff;border-radius:4px 4px 2px 2px}.carNose{position:absolute;top:0;left:13px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #2878f0}.carLight{position:absolute;left:8px;top:33px;width:4px;height:3px;background:white;box-shadow:14px 0 white}
+.leaflet-marker-icon{background:transparent;border:0}.leaflet-tile-pane.dark-tiles .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.88) contrast(.9)}.carBody{position:absolute;left:6px;top:9px;width:22px;height:29px;border:2px solid white;border-radius:8px 8px 6px 6px;background:#2878f0}.carGlass{position:absolute;left:11px;top:13px;width:12px;height:8px;background:#bfe2ff;border-radius:4px 4px 2px 2px}.carNose{position:absolute;top:0;left:13px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #2878f0}.carLight{position:absolute;left:8px;top:33px;width:4px;height:3px;background:white;box-shadow:14px 0 white}
 @media(max-width:700px){
  #searchPanel{top:9px;left:9px;width:calc(100vw - 18px);padding:10px}
  #searchPanel.collapsed .searchFields,#searchPanel.collapsed .quick{display:none}
@@ -119,10 +119,6 @@ const map=L.map("map",{
 const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
   maxZoom:19,
   attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-});
-const darkLayer=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
-  maxZoom:20,
-  attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
 });
 streetLayer.addTo(map);
 
@@ -235,8 +231,7 @@ $("compassBtn").onclick=()=>{
 };
 $("themeBtn").onclick=()=>{
  S.dark=!S.dark;
- if(S.dark){map.removeLayer(streetLayer);darkLayer.addTo(map)}
- else{map.removeLayer(darkLayer);streetLayer.addTo(map)}
+ map.getPane("tilePane").classList.toggle("dark-tiles",S.dark);
  $("themeBtn").textContent=S.dark?"☀":"☾";
 };
 $("zoomInBtn").onclick=()=>map.zoomIn();
