@@ -1,3256 +1,428 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HorizonMaps</title>
-
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.css">
 <style>
-
-:root{
-  --bg:#ffffff;
-  --panel:#ffffff;
-  --text:#1a1a1a;
-  --muted:#6b6b6b;
-  --border:#dedede;
-  --accent:#4285F4;
-  --route:#4285F4;
-  --traveled:#8a8a8a;
-  --danger:#ea4335;
-  --shadow:0 2px 14px rgba(0,0,0,.20);
-}
-
-*{
-  box-sizing:border-box;
-}
-
-html,
-body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
-  color:var(--text);
-}
-
-#map{
-  position:absolute;
-  inset:0;
-}
-
-
-/* ==============================
-   SEARCH PANEL
-============================== */
-
-#panel{
-  position:absolute;
-  z-index:2000;
-  top:12px;
-  left:12px;
-
-  width:270px;
-  max-width:calc(100vw - 24px);
-
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:14px;
-
-  box-shadow:var(--shadow);
-}
-
-label{
-  display:block;
-  font-size:11px;
-  color:var(--muted);
-  margin-bottom:4px;
-}
-
-.field{
-  position:relative;
-  margin-bottom:9px;
-}
-
-.row{
-  display:flex;
-  gap:6px;
-}
-
-input{
-  width:100%;
-  min-width:0;
-
-  padding:10px;
-
-  border:1px solid var(--border);
-  border-radius:8px;
-
-  background:var(--bg);
-  color:var(--text);
-
-  font-size:14px;
-}
-
-input:focus{
-  outline:2px solid var(--accent);
-  outline-offset:-1px;
-}
-
-.iconbtn{
-  width:40px;
-  flex:none;
-
-  border:1px solid var(--border);
-  border-radius:8px;
-
-  background:var(--bg);
-  color:var(--text);
-
-  cursor:pointer;
-  font-size:17px;
-}
-
-#routeBtn{
-  width:100%;
-
-  margin-top:3px;
-  padding:10px;
-
-  border:0;
-  border-radius:8px;
-
-  background:var(--accent);
-  color:white;
-
-  font-size:14px;
-  font-weight:600;
-
-  cursor:pointer;
-}
-
-#routeBtn:disabled{
-  opacity:.55;
-  cursor:default;
-}
-
-#status{
-  margin-top:8px;
-
-  min-height:15px;
-
-  color:var(--muted);
-  font-size:12px;
-}
-
-#status.err{
-  color:var(--danger);
-}
-
-
-/* ==============================
-   SUGGESTIONS
-============================== */
-
-.suggestions{
-  display:none;
-
-  position:absolute;
-  z-index:3000;
-
-  top:100%;
-  left:0;
-  right:0;
-
-  margin-top:4px;
-
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:8px;
-
-  box-shadow:var(--shadow);
-
-  overflow:hidden;
-}
-
-.suggestions.show{
-  display:block;
-}
-
-.suggestion-item{
-  padding:9px 10px;
-
-  border-bottom:1px solid var(--border);
-
-  font-size:12px;
-  line-height:1.3;
-
-  cursor:pointer;
-}
-
-.suggestion-item:last-child{
-  border-bottom:0;
-}
-
-.suggestion-item:hover{
-  background:#f2f2f2;
-}
-
-
-/* ==============================
-   NAV INFO
-============================== */
-
-#navInfo{
-  display:none;
-
-  position:absolute;
-
-  z-index:1500;
-
-  top:14px;
-  left:50%;
-
-  transform:translateX(-50%);
-
-  width:min(520px, calc(100vw - 300px));
-
-  gap:8px;
-
-  pointer-events:none;
-}
-
-.navCard{
-  flex:1;
-  min-width:0;
-
-  background:var(--panel);
-
-  border:1px solid var(--border);
-  border-radius:12px;
-
-  padding:10px;
-
-  box-shadow:var(--shadow);
-
-  text-align:center;
-}
-
-.navLabel{
-  font-size:9px;
-
-  color:var(--muted);
-
-  text-transform:uppercase;
-
-  letter-spacing:.5px;
-}
-
-.navValue{
-  margin-top:2px;
-
-  font-size:17px;
-
-  font-weight:700;
-
-  white-space:nowrap;
-}
-
-
-/* ==============================
-   NEXT TURN
-============================== */
-
-#nextTurn{
-  display:none;
-
-  position:absolute;
-
-  z-index:1600;
-
-  top:95px;
-  left:50%;
-
-  transform:translateX(-50%);
-
-  width:min(390px, calc(100vw - 24px));
-
-  background:var(--panel);
-
-  border:1px solid var(--border);
-  border-radius:14px;
-
-  padding:12px 15px;
-
-  box-shadow:var(--shadow);
-
-  pointer-events:none;
-}
-
-.turnTop{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.turnIcon{
-  width:48px;
-  height:48px;
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-
-  border-radius:11px;
-
-  background:var(--accent);
-
-  color:white;
-
-  font-size:29px;
-  font-weight:700;
-
-  flex:none;
-}
-
-.turnInfo{
-  min-width:0;
-}
-
-.turnDistance{
-  font-size:21px;
-  font-weight:700;
-}
-
-.turnType{
-  margin-top:2px;
-
-  font-size:13px;
-
-  color:var(--muted);
-
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.turnRoad{
-  margin-top:7px;
-
-  font-size:12px;
-
-  color:var(--muted);
-
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-
-/* ==============================
-   CAR
-============================== */
-
-.car-marker{
-  background:transparent;
-  border:0;
-}
-
-.carIcon{
-  position:relative;
-
-  width:42px;
-  height:42px;
-
-  filter:drop-shadow(
-    0 2px 4px rgba(0,0,0,.4)
-  );
-}
-
-.carBody{
-  position:absolute;
-
-  width:26px;
-  height:18px;
-
-  left:8px;
-  top:13px;
-
-  background:#4285F4;
-
-  border:2px solid white;
-
-  border-radius:7px 7px 5px 5px;
-}
-
-.carBody:before{
-  content:"";
-
-  position:absolute;
-
-  width:13px;
-  height:8px;
-
-  left:4px;
-  top:-8px;
-
-  background:#4285F4;
-
-  border:2px solid white;
-
-  border-bottom:0;
-
-  border-radius:6px 6px 0 0;
-}
-
-.carBody:after{
-  content:"";
-
-  position:absolute;
-
-  width:5px;
-  height:5px;
-
-  left:2px;
-  bottom:-5px;
-
-  background:#222;
-
-  border-radius:50%;
-
-  box-shadow:17px 0 0 #222;
-}
-
-.carArrow{
-  position:absolute;
-
-  left:16px;
-  top:0;
-
-  width:0;
-  height:0;
-
-  border-left:5px solid transparent;
-  border-right:5px solid transparent;
-  border-bottom:10px solid #4285F4;
-}
-
-
-/* ==============================
-   MOBILE
-============================== */
-
+:root{--bg:#fff;--panel:#fff;--text:#17191d;--muted:#68717d;--border:#e1e5eb;--blue:#2878f0;--shadow:0 5px 24px #0002}
+*{box-sizing:border-box}html,body,#map{height:100%;width:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;color:var(--text)}body{overflow:hidden}#map{position:absolute;inset:0;z-index:0;background:#e9eef3}
+.panel,.card,.sheet{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+#searchPanel{position:absolute;z-index:5;top:12px;left:12px;width:320px;max-width:calc(100vw - 24px);padding:13px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.header strong{font-size:17px}.header small{font-size:9px;letter-spacing:1px;color:var(--muted)}
+label{display:block;margin:8px 0 4px;color:var(--muted);font-size:11px}
+input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font-size:14px;outline:none}input:focus{border-color:var(--blue)}
+.row{display:flex;gap:6px}.btn{padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font-weight:650;font-size:12px;cursor:pointer}.btn:hover{border-color:var(--blue)}.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.active{background:#eaf2ff;border-color:#9bc1ff;color:#1458bb}.btn.danger{color:#c52d2d}.btn:disabled{opacity:.5;cursor:default}
+#routeBtn{width:100%;margin-top:9px;padding:12px;font-size:14px}
+.field{position:relative}.suggestions{display:none;position:absolute;z-index:20;top:100%;left:0;right:0;max-height:210px;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow)}.suggestions.show{display:block}.suggestion{padding:10px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer}.suggestion:hover{background:#eff6ff}
+#status{min-height:16px;margin-top:8px;color:var(--muted);font-size:11px;line-height:1.4}#status.error{color:#c52d2d}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.quick .btn{padding:8px 3px}
+#collapseBtn{padding:5px 9px}
+#navInfo{display:none;position:absolute;z-index:4;top:12px;left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 360px));gap:7px;pointer-events:none}
+.navCard{flex:1;min-width:0;padding:8px 4px;text-align:center}.navLabel{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.6px}.navValue{margin-top:3px;font-size:16px;font-weight:800;white-space:nowrap}
+#nextTurn{display:none;position:absolute;z-index:4;top:85px;left:50%;transform:translateX(-50%);width:min(390px,calc(100vw - 24px));padding:12px;pointer-events:none}
+.turn{display:flex;align-items:center;gap:12px}.turnIcon{width:45px;height:45px;display:grid;place-items:center;border-radius:12px;background:var(--blue);color:#fff;font-size:26px}.turnDistance{font-size:21px;font-weight:800}.turnType{font-size:13px;color:var(--muted);margin-top:2px}.turnRoad{font-size:11px;color:var(--muted);margin-top:7px}
+#speedBox{position:absolute;z-index:4;bottom:16px;left:14px;min-width:92px;padding:8px 12px;text-align:center}#speedValue{font-size:23px;font-weight:800}#speedUnit{font-size:10px;color:var(--muted)}
+#mapControls{position:absolute;z-index:4;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}#mapControls .btn{width:42px;height:40px;padding:0;font-size:17px}
+#bottomBar{position:absolute;z-index:4;right:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 130px)}#bottomBar .btn{box-shadow:var(--shadow)}
+.sheet{display:none;position:absolute;z-index:8;right:12px;top:12px;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;padding:13px}
+.sheetHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.sheetHead strong{font-size:15px}
+.step,.placeItem,.historyItem{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.4}.stepIcon{width:25px;text-align:center;font-size:18px}.muted{color:var(--muted)}
+.routeChoice{margin-top:7px;padding:9px;border:1px solid var(--border);border-radius:9px;font-size:12px;cursor:pointer}.routeChoice.selected{border-color:var(--blue);background:#eff6ff}
+.carMarker{width:34px;height:44px;position:relative;filter:drop-shadow(0 2px 3px #0007)}
+.leaflet-marker-icon{background:transparent;border:0}.carBody{position:absolute;left:6px;top:9px;width:22px;height:29px;border:2px solid white;border-radius:8px 8px 6px 6px;background:#2878f0}.carGlass{position:absolute;left:11px;top:13px;width:12px;height:8px;background:#bfe2ff;border-radius:4px 4px 2px 2px}.carNose{position:absolute;top:0;left:13px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #2878f0}.carLight{position:absolute;left:8px;top:33px;width:4px;height:3px;background:white;box-shadow:14px 0 white}
 @media(max-width:700px){
-
-  #panel{
-    width:calc(100vw - 24px);
-  }
-
-  #navInfo{
-    top:auto;
-    bottom:15px;
-
-    width:calc(100vw - 24px);
-  }
-
-  #nextTurn{
-    top:15px;
-  }
-
-  .navValue{
-    font-size:15px;
-  }
-
+ #searchPanel{top:9px;left:9px;width:calc(100vw - 18px);padding:10px}
+ #searchPanel.collapsed .searchFields,#searchPanel.collapsed .quick{display:none}
+ #navInfo{top:auto;bottom:70px;width:calc(100vw - 20px)}
+ #nextTurn{top:10px}
+ #mapControls{top:auto;right:9px;bottom:70px}
+ #mapControls .btn{width:38px;height:36px}
+ #bottomBar{left:9px;right:55px;bottom:9px;justify-content:flex-start}
+ #bottomBar .btn{padding:8px}
+ #speedBox{bottom:65px;left:9px}
+ #directions,#places,#history{top:9px;right:9px;max-height:calc(100vh - 18px)}
 }
-
 </style>
 </head>
-
-
 <body>
-
 <div id="map"></div>
 
-
-<!-- SEARCH -->
-
-<div id="panel">
-
-  <label>From</label>
-
-  <div class="field">
-
-    <div class="row">
-
-      <input
-        id="origin"
-        placeholder="Your location or address"
-        autocomplete="off"
-      >
-
-      <button
-        class="iconbtn"
-        id="gpsBtn"
-        title="Use current location"
-      >📍</button>
-
-    </div>
-
-    <div
-      id="originSuggest"
-      class="suggestions"
-    ></div>
-
-  </div>
-
-
-  <label>To</label>
-
-  <div class="field">
-
-    <input
-      id="dest"
-      placeholder="Enter destination"
-      autocomplete="off"
-    >
-
-    <div
-      id="destSuggest"
-      class="suggestions"
-    ></div>
-
-  </div>
-
-
-  <button id="routeBtn">
-    Route
-  </button>
-
-
-  <div id="status">
-    Enter a starting point and destination.
-  </div>
-
-</div>
-
-
-<!-- ETA / TIME / DISTANCE -->
+<section id="searchPanel" class="panel">
+ <div class="header"><div><strong>HorizonMaps</strong><br><small>EXPLORE · NAVIGATE</small></div><button class="btn" id="collapseBtn">−</button></div>
+ <div class="searchFields">
+  <label>Starting point</label>
+  <div class="field"><div class="row"><input id="origin" placeholder="My current location" autocomplete="off"><button class="btn" id="gpsBtn" title="Use my location">📍</button></div><div id="originSuggest" class="suggestions"></div></div>
+  <label>Destination</label>
+  <div class="field"><input id="dest" placeholder="Where do you want to go?" autocomplete="off"><div id="destSuggest" class="suggestions"></div></div>
+  <button class="btn primary" id="routeBtn">Find route</button>
+  <div id="status">Enter a destination to get started.</div>
+ </div>
+ <div class="quick"><button class="btn" id="saveBtn">☆ Save</button><button class="btn" id="savedBtn">★ Saved</button><button class="btn" id="historyBtn">◷ History</button></div>
+ <div id="routeChoices"></div>
+</section>
 
 <div id="navInfo">
+ <div class="navCard card"><div class="navLabel">Arrival</div><div class="navValue" id="etaValue">--</div></div>
+ <div class="navCard card"><div class="navLabel">Time left</div><div class="navValue" id="timeValue">--</div></div>
+ <div class="navCard card"><div class="navLabel">Distance</div><div class="navValue" id="distanceValue">--</div></div>
+</div>
+<div id="nextTurn" class="card"><div class="turn"><div class="turnIcon" id="turnIcon">↑</div><div><div class="turnDistance" id="turnDistance">--</div><div class="turnType" id="turnType">Continue straight</div></div></div><div class="turnRoad" id="turnRoad"></div></div>
+<div id="speedBox" class="card"><div id="speedValue">--</div><div id="speedUnit">mph · GPS speed</div></div>
 
-  <div class="navCard">
-
-    <div class="navLabel">
-      ETA
-    </div>
-
-    <div
-      id="etaValue"
-      class="navValue"
-    >
-      --
-    </div>
-
-  </div>
-
-
-  <div class="navCard">
-
-    <div class="navLabel">
-      Time
-    </div>
-
-    <div
-      id="timeValue"
-      class="navValue"
-    >
-      --
-    </div>
-
-  </div>
-
-
-  <div class="navCard">
-
-    <div class="navLabel">
-      Distance
-    </div>
-
-    <div
-      id="distanceValue"
-      class="navValue"
-    >
-      --
-    </div>
-
-  </div>
-
+<div id="mapControls">
+ <button class="btn" id="recenterBtn" title="Recenter">◎</button>
+ <button class="btn" id="compassBtn" title="Toggle heading-up">🧭</button>
+  <button class="btn" id="themeBtn" title="Toggle map theme">☾</button>
+ <button class="btn" id="zoomInBtn" title="Zoom in">＋</button>
+ <button class="btn" id="zoomOutBtn" title="Zoom out">−</button>
+</div>
+<div id="bottomBar">
+ <button class="btn" id="directionsBtn">☷ Directions</button>
+ <button class="btn" id="nearbyBtn">⌕ Nearby</button>
+ <button class="btn" id="voiceBtn">🔊 Voice on</button>
+ <button class="btn" id="trafficBtn">🚦 Traffic</button>
+ <button class="btn danger" id="stopBtn" style="display:none">■ Stop</button>
 </div>
 
-
-<!-- NEXT TURN -->
-
-<div id="nextTurn">
-
-  <div class="turnTop">
-
-    <div
-      id="turnIcon"
-      class="turnIcon"
-    >
-      ↑
-    </div>
-
-    <div class="turnInfo">
-
-      <div
-        id="turnDistance"
-        class="turnDistance"
-      >
-        --
-      </div>
-
-      <div
-        id="turnType"
-        class="turnType"
-      >
-        Continue straight
-      </div>
-
-    </div>
-
-  </div>
-
-  <div
-    id="turnRoad"
-    class="turnRoad"
-  >
-    --
-  </div>
-
-</div>
-
+<div id="directions" class="sheet"><div class="sheetHead"><strong>Turn-by-turn directions</strong><button class="btn" data-close="directions">✕</button></div><div id="directionsContent" class="muted">Plan a route to see directions.</div></div>
+<div id="places" class="sheet"><div class="sheetHead"><strong>Places</strong><button class="btn" data-close="places">✕</button></div><div id="placesContent" class="muted">Nearby places will appear here.</div></div>
+<div id="history" class="sheet"><div class="sheetHead"><strong>Route history</strong><button class="btn" data-close="history">✕</button></div><div id="historyContent"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-
+<script src="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.js"></script>
 <script>
+const $=id=>document.getElementById(id);
+const ROUTER="https://router.project-osrm.org";
+const GEOCODER="https://nominatim.openstreetmap.org/search";
+const OVERPASS="https://overpass-api.de/api/interpreter";
+const S={
+ gps:null,accuracy:999,speed:null,heading:0,watch:null,lastFix:null,lastFixAt:0,
+ marker:null,target:null,display:null,predictionAt:0,
+ route:null,routes:[],routeIndex:0,steps:[],stepIndex:0,coords:[],progress:0,
+ origin:null,destination:null,live:false,following:false,headingUp:true,dark:false,
+ rerouting:false,lastReroute:0,voice:true,spokenStep:-1,frame:0,history:[],saved:[],
+ searchControllers:{},searchSequence:{},routeLine:null,alternativeLines:[],completedLine:null,
+ destinationMarker:null
+};
 
-/* =========================================================
-   MAP
-========================================================= */
+const map=L.map("map",{
+  rotate:true,
+  bearing:0,
+  zoomControl:false,
+  attributionControl:true,
+  preferCanvas:true
+}).setView([37.3382,-121.8863],12);
 
-const map =
-  L.map("map")
-   .setView(
-     [37.3382,-121.8863],
-     12
-   );
+const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:19,
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+});
+const darkLayer=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
+  maxZoom:20,
+  attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+});
+streetLayer.addTo(map);
 
-
-L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  {
-    attribution:
-      "&copy; OpenStreetMap contributors"
-  }
-).addTo(map);
-
-
-/* =========================================================
-   STATE
-========================================================= */
-
-let gpsCoords = null;
-
-let gpsAccuracy = 0;
-
-let watchId = null;
-
-let userCarMarker = null;
-
-let accuracyCircle = null;
-
-let selectedOrigin = null;
-
-let selectedDest = null;
-
-let activeDestination = null;
-
-let currentRoute = null;
-
-let currentSteps = [];
-
-let currentStepIndex = 0;
-
-let routeCoordinates = [];
-
-let traveledLine = null;
-
-let remainingLine = null;
-
-let destinationMarker = null;
-
-let originMarker = null;
-
-let followingUser = false;
-
-let liveRouting = false;
-
-let rerouting = false;
-
-let lastRerouteTime = 0;
-
-let lastRouteUpdate = 0;
-
-let animationFrame = null;
-
-let displayedCarPosition = null;
-
-let targetCarPosition = null;
-
-let displayedHeading = 0;
-
-let targetHeading = 0;
-
-
-/*
-   How far from the route the user must be
-   before automatic rerouting happens.
-*/
-
-const OFF_ROUTE_DISTANCE = 55;
-
-
-/*
-   Don't reroute constantly.
-*/
-
-const REROUTE_COOLDOWN = 8000;
-
-
-/*
-   GPS positions smaller than this are ignored
-   for visual movement.
-*/
-
-const MIN_MOVEMENT_METERS = 2;
-
-
-/* =========================================================
-   ELEMENTS
-========================================================= */
-
-const originInput =
-  document.getElementById("origin");
-
-const destInput =
-  document.getElementById("dest");
-
-const routeButton =
-  document.getElementById("routeBtn");
-
-const statusEl =
-  document.getElementById("status");
-
-const navInfo =
-  document.getElementById("navInfo");
-
-const nextTurn =
-  document.getElementById("nextTurn");
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-function setStatus(
-  text,
-  error = false
-){
-
-  statusEl.textContent =
-    text;
-
-  statusEl.className =
-    error ? "err" : "";
-
+function status(t,error=false){$("status").textContent=t;$("status").className=error?"error":""}
+const rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI;
+function dist(a,b){const R=6371000,p1=rad(a[0]),p2=rad(b[0]),dp=rad(b[0]-a[0]),dl=rad(b[1]-a[1]);const q=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
+function bearing(a,b){const p1=rad(a[0]),p2=rad(b[0]),dl=rad(b[1]-a[1]);return (deg(Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl)))+360)%360}
+function wrap(x){return (x%360+360)%360}
+function angleDelta(a,b){return (b-a+540)%360-180}
+function smoothAngle(a,b,f=.2){return wrap(a+angleDelta(a,b)*f)}
+function predictPoint(p,h,m){const R=6371000,d=m/R,t=rad(h),p1=rad(p[0]),l1=rad(p[1]);const p2=Math.asin(Math.sin(p1)*Math.cos(d)+Math.cos(p1)*Math.sin(d)*Math.cos(t));const l2=l1+Math.atan2(Math.sin(t)*Math.sin(d)*Math.cos(p1),Math.cos(d)-Math.sin(p1)*Math.sin(p2));return [deg(p2),((deg(l2)+540)%360)-180]}
+function distText(m){if(m<1000)return Math.round(m*3.28084/10)*10+" ft";const mi=m/1609.344;return mi.toFixed(mi<10?1:0)+" mi"}
+function timeText(s){const m=Math.max(0,Math.round(s/60));return m>=60?Math.floor(m/60)+" hr "+m%60+" min":m+" min"}
+function routePoint(p){return L.latLng(p[0],p[1])}
+function clearLines(){
+ [S.routeLine,S.completedLine,...S.alternativeLines].forEach(x=>{if(x)map.removeLayer(x)});
+ S.routeLine=null;S.completedLine=null;S.alternativeLines=[];
 }
-
-
-/* =========================================================
-   DISTANCE
-========================================================= */
-
-function distanceMeters(
-  a,
-  b
-){
-
-  const R =
-    6371000;
-
-  const lat1 =
-    a[0] * Math.PI / 180;
-
-  const lat2 =
-    b[0] * Math.PI / 180;
-
-  const dLat =
-    (b[0]-a[0]) *
-    Math.PI / 180;
-
-  const dLon =
-    (b[1]-a[1]) *
-    Math.PI / 180;
-
-  const x =
-    Math.sin(dLat/2) *
-    Math.sin(dLat/2) +
-    Math.cos(lat1) *
-    Math.cos(lat2) *
-    Math.sin(dLon/2) *
-    Math.sin(dLon/2);
-
-  return (
-    2 *
-    R *
-    Math.atan2(
-      Math.sqrt(x),
-      Math.sqrt(1-x)
-    )
-  );
-
+function updateProgress(){
+ if(!S.gps||!S.coords.length)return;
+ let best=S.progress,bestD=Infinity;
+ const end=Math.min(S.coords.length-1,S.progress+300);
+ for(let i=Math.max(0,S.progress-4);i<=end;i++){const d=dist(S.gps,S.coords[i]);if(d<bestD){bestD=d;best=i}}
+ if(best>=S.progress-2)S.progress=Math.max(S.progress,best);
+ const done=S.coords.slice(0,S.progress+1),left=S.coords.slice(S.progress);
+ if(done.length>1){
+  if(!S.completedLine)S.completedLine=L.polyline(done,{color:"#9299a3",weight:6,opacity:.85}).addTo(map);
+  else S.completedLine.setLatLngs(done);
+ }
+ if(left.length>1&&S.routeLine)S.routeLine.setLatLngs(left);
 }
-
-
-/* =========================================================
-   BEARING
-========================================================= */
-
-function bearing(
-  a,
-  b
-){
-
-  const lat1 =
-    a[0] * Math.PI / 180;
-
-  const lat2 =
-    b[0] * Math.PI / 180;
-
-  const lon1 =
-    a[1] * Math.PI / 180;
-
-  const lon2 =
-    b[1] * Math.PI / 180;
-
-  const y =
-    Math.sin(lon2-lon1) *
-    Math.cos(lat2);
-
-  const x =
-    Math.cos(lat1) *
-    Math.sin(lat2) -
-    Math.sin(lat1) *
-    Math.cos(lat2) *
-    Math.cos(lon2-lon1);
-
-  return (
-    Math.atan2(y,x) *
-    180 / Math.PI +
-    360
-  ) % 360;
-
+function drawRoutes(){
+ clearLines();
+ const chosen=S.routes[S.routeIndex];
+ S.coords=chosen.geometry.coordinates.map(p=>[p[1],p[0]]);
+ S.routeLine=L.polyline(S.coords,{color:"#2878f0",weight:6,opacity:.95,lineCap:"round",lineJoin:"round"}).addTo(map);
+ S.routes.forEach((r,i)=>{
+  if(i===S.routeIndex)return;
+  const pts=r.geometry.coordinates.map(p=>[p[1],p[0]]);
+  S.alternativeLines.push(L.polyline(pts,{color:"#929ba8",weight:5,opacity:.7,dashArray:"8 9"}).addTo(map));
+ });
+ if(S.destinationMarker)map.removeLayer(S.destinationMarker);
+ S.destinationMarker=L.marker([S.destination.lat,S.destination.lon]).addTo(map).bindPopup("Destination");
+ const bounds=L.latLngBounds(S.coords.map(routePoint));
+ map.fitBounds(bounds,{paddingTopLeft:[340,150],paddingBottomRight:[80,110],maxZoom:16});
+ if(S.following&&S.gps)map.setView(S.gps,17);
+ updateProgress();
 }
-
-
-/* =========================================================
-   CAR ICON
-========================================================= */
-
-function createCarIcon(
-  heading
-){
-
-  return L.divIcon({
-
-    className:
-      "car-marker",
-
-    html:
-      '<div class="carIcon" ' +
-      'style="transform:rotate(' +
-      heading +
-      'deg)">' +
-
-        '<div class="carArrow"></div>' +
-
-        '<div class="carBody"></div>' +
-
-      '</div>',
-
-    iconSize:[42,42],
-
-    iconAnchor:[21,21]
-
-  });
-
+function makeCarIcon(){
+ return L.divIcon({
+  className:"carMarker",
+  html:'<div class="carNose"></div><div class="carBody"></div><div class="carGlass"></div><div class="carLight"></div>',
+  iconSize:[34,44],iconAnchor:[17,22]
+ });
 }
-
-
-/* =========================================================
-   SMOOTH HEADING
-========================================================= */
-
-function smoothHeading(
-  current,
-  target
-){
-
-  let diff =
-    target-current;
-
-  while(diff > 180)
-    diff -= 360;
-
-  while(diff < -180)
-    diff += 360;
-
-  return current +
-    diff * .15;
-
+function setCar(p){
+ if(!S.marker)S.marker=L.marker(p,{icon:makeCarIcon(),interactive:false,zIndexOffset:1000}).addTo(map);
+ else S.marker.setLatLng(p);
+ const el=S.marker.getElement();
+ if(el)el.style.transform="rotate("+S.heading+"deg)";
 }
-
-
-/* =========================================================
-   SMOOTH CAR ANIMATION
-========================================================= */
-
-function animateCar(){
-
-  if(
-    !userCarMarker ||
-    !targetCarPosition
-  ){
-
-    animationFrame =
-      requestAnimationFrame(
-        animateCar
-      );
-
-    return;
-
+function animate(){
+ if(S.target){
+  if(!S.display)S.display=S.target.slice();
+  const elapsed=Math.max(0,Math.min(2,(performance.now()-S.predictionAt)/1000));
+  const speed=S.speed&&S.speed>1.5&&S.accuracy<40?S.speed:0;
+  const predicted=speed?predictPoint(S.target,S.heading,Math.min(10,speed*elapsed)):S.target;
+  S.display[0]+=(predicted[0]-S.display[0])*.22;
+  S.display[1]+=(predicted[1]-S.display[1])*.22;
+  setCar(S.display);
+  if(S.following){
+   map.panTo(S.display,{animate:false});
+   if(S.headingUp)map.setBearing((360-S.heading)%360);
+   else if(Math.abs(map.getBearing())>.1)map.setBearing(0);
   }
-
-
-  if(!displayedCarPosition){
-
-    displayedCarPosition =
-      targetCarPosition.slice();
-
-  }
-
-
-  const latDiff =
-    targetCarPosition[0] -
-    displayedCarPosition[0];
-
-  const lonDiff =
-    targetCarPosition[1] -
-    displayedCarPosition[1];
-
-
-  /*
-     Move a fraction toward the
-     latest GPS position.
-  */
-
-  displayedCarPosition[0] +=
-    latDiff * .12;
-
-  displayedCarPosition[1] +=
-    lonDiff * .12;
-
-
-  displayedHeading =
-    smoothHeading(
-      displayedHeading,
-      targetHeading
-    );
-
-
-  userCarMarker.setLatLng(
-    displayedCarPosition
-  );
-
-
-  /*
-     Recreate the icon only when needed.
-  */
-
-  userCarMarker.setIcon(
-    createCarIcon(
-      displayedHeading
-    )
-  );
-
-
-  /*
-     Update traveled/remaining route
-     while the car moves.
-  */
-
-  if(
-    routeCoordinates.length &&
-    gpsCoords
-  ){
-
-    updateRouteProgress();
-
-  }
-
-
-  animationFrame =
-    requestAnimationFrame(
-      animateCar
-    );
-
+ }
+ S.frame=requestAnimationFrame(animate);
 }
+S.frame=requestAnimationFrame(animate);
 
-
-/* Start animation */
-
-animationFrame =
-  requestAnimationFrame(
-    animateCar
-  );
-
-
-/* =========================================================
-   GPS
-========================================================= */
-
-function startLocationTracking(){
-
-  if(!navigator.geolocation){
-
-    setStatus(
-      "Geolocation is not supported.",
-      true
-    );
-
-    return false;
-
-  }
-
-
-  if(watchId !== null){
-
-    return true;
-
-  }
-
-
-  setStatus(
-    "Getting your location..."
-  );
-
-
-  watchId =
-    navigator.geolocation.watchPosition(
-
-      position => {
-
-        handleGPSPosition(
-          position
-        );
-
-      },
-
-      error => {
-
-        let message =
-          "Could not get your location.";
-
-        if(
-          error.code ===
-          error.PERMISSION_DENIED
-        ){
-
-          message =
-            "Location permission was denied.";
-
-        }
-
-        if(
-          error.code ===
-          error.TIMEOUT
-        ){
-
-          message =
-            "Location request timed out.";
-
-        }
-
-        setStatus(
-          message,
-          true
-        );
-
-      },
-
-      {
-        enableHighAccuracy:true,
-        maximumAge:1000,
-        timeout:10000
-      }
-
-    );
-
-
-  return true;
-
+function gpsUpdate(pos){
+ const c=pos.coords,p=[c.latitude,c.longitude],now=performance.now();
+ S.accuracy=c.accuracy||999;
+ if(S.lastFix){
+  const meters=dist(S.lastFix,p),dt=Math.max(.2,(now-S.lastFixAt)/1000);
+  if(Number.isFinite(c.heading)&&c.heading>=0&&c.speed>1.2)S.heading=smoothAngle(S.heading,c.heading,.38);
+  else if(meters>3&&dt<12)S.heading=smoothAngle(S.heading,bearing(S.lastFix,p),.32);
+  const measured=Number.isFinite(c.speed)&&c.speed>=0?c.speed:meters/dt;
+  if(measured<60)S.speed=S.speed===null?measured:S.speed*.65+measured*.35;
+ }
+ S.lastFix=p;S.lastFixAt=now;S.predictionAt=performance.now();S.gps=p;S.target=p;
+ $("origin").value="My current location";S.origin={lat:p[0],lon:p[1],label:"Your location"};
+ $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);
+ if(S.live){updateProgress();updateNavInfo();updateNextTurn();checkOffRoute()}
 }
-
-
-/* =========================================================
-   GPS POSITION HANDLER
-========================================================= */
-
-function handleGPSPosition(
-  position
-){
-
-  const lat =
-    position.coords.latitude;
-
-  const lon =
-    position.coords.longitude;
-
-
-  const newPosition =
-    [lat,lon];
-
-
-  gpsAccuracy =
-    position.coords.accuracy || 0;
-
-
-  /*
-     Calculate heading from actual movement.
-  */
-
-  if(gpsCoords){
-
-    const movement =
-      distanceMeters(
-        gpsCoords,
-        newPosition
-      );
-
-
-    if(
-      movement >=
-      MIN_MOVEMENT_METERS
-    ){
-
-      targetHeading =
-        bearing(
-          gpsCoords,
-          newPosition
-        );
-
-    }
-
-  }
-
-
-  gpsCoords =
-    newPosition;
-
-
-  targetCarPosition =
-    newPosition.slice();
-
-
-  originInput.value =
-    "My current location";
-
-
-  selectedOrigin = {
-
-    lat:lat,
-    lon:lon,
-    label:"Your location"
-
-  };
-
-
-  if(!userCarMarker){
-
-    userCarMarker =
-      L.marker(
-        newPosition,
-        {
-          icon:createCarIcon(
-            targetHeading
-          ),
-          zIndexOffset:2000
-        }
-      ).addTo(map);
-
-  }
-
-
-  /*
-     Accuracy circle.
-  */
-
-  if(!accuracyCircle){
-
-    accuracyCircle =
-      L.circle(
-        newPosition,
-        {
-          radius:gpsAccuracy,
-          color:"#4285F4",
-          fillColor:"#4285F4",
-          fillOpacity:.10,
-          weight:1
-        }
-      ).addTo(map);
-
-  }else{
-
-    accuracyCircle.setLatLng(
-      newPosition
-    );
-
-    accuracyCircle.setRadius(
-      gpsAccuracy
-    );
-
-  }
-
-
-  /*
-     Follow the car during navigation.
-  */
-
-  if(followingUser){
-
-    map.panTo(
-      displayedCarPosition ||
-      newPosition,
-      {
-        animate:true,
-        duration:.3
-      }
-    );
-
-  }
-
-
-  /*
-     Navigation is active.
-  */
-
-  if(
-    liveRouting &&
-    currentRoute
-  ){
-
-    checkOffRoute();
-
-    updateNavigationInfo();
-
-    updateNextTurn();
-
-  }
-
-
+function startGPS(){
+ if(!navigator.geolocation){status("This browser does not support location.",true);return}
+ if(S.watch!==null)return;
+ status("Waiting for GPS location...");
+ S.watch=navigator.geolocation.watchPosition(gpsUpdate,e=>status(e.code===1?"Location permission denied.":"Could not get GPS location.",true),{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
 }
+function waitGPS(){return new Promise((resolve,reject)=>{const t=Date.now();const check=()=>S.gps?resolve():Date.now()-t>16000?reject(new Error("Could not get GPS location.")):setTimeout(check,200);check()})}
+$("gpsBtn").onclick=()=>{startGPS();S.following=true};
+$("recenterBtn").onclick=()=>{if(!S.gps){startGPS();return}S.following=true;map.setView(S.gps,17);if(S.headingUp)map.setBearing((360-S.heading)%360)};
+$("compassBtn").onclick=()=>{
+ S.headingUp=!S.headingUp;
+ $("compassBtn").classList.toggle("active",S.headingUp);
+ if(!S.headingUp)map.setBearing(0);
+ else if(S.gps)map.setBearing((360-S.heading)%360);
+};
+$("themeBtn").onclick=()=>{
+ S.dark=!S.dark;
+ if(S.dark){map.removeLayer(streetLayer);darkLayer.addTo(map)}
+ else{map.removeLayer(darkLayer);streetLayer.addTo(map)}
+ $("themeBtn").textContent=S.dark?"☀":"☾";
+};
+$("zoomInBtn").onclick=()=>map.zoomIn();
+$("zoomOutBtn").onclick=()=>map.zoomOut();
+map.on("dragstart",()=>S.following=false);
 
-
-/* =========================================================
-   GPS BUTTON
-========================================================= */
-
-document
-  .getElementById("gpsBtn")
-  .addEventListener(
-    "click",
-    () => {
-
-      if(
-        startLocationTracking()
-      ){
-
-        followingUser =
-          true;
-
-      }
-
-    }
-  );
-
-
-/* =========================================================
-   WAIT FOR GPS
-========================================================= */
-
-function waitForGPS(
-  timeout = 12000
-){
-
-  return new Promise(
-    (resolve,reject) => {
-
-      const start =
-        Date.now();
-
-
-      const timer =
-        setInterval(
-          () => {
-
-            if(gpsCoords){
-
-              clearInterval(
-                timer
-              );
-
-              resolve();
-
-              return;
-
-            }
-
-
-            if(
-              Date.now()-start >=
-              timeout
-            ){
-
-              clearInterval(
-                timer
-              );
-
-              reject(
-                new Error(
-                  "Could not get your location."
-                )
-              );
-
-            }
-
-          },
-          100
-        );
-
-    }
-  );
-
+async function geocode(q,signal){
+ const r=await fetch(GEOCODER+"?format=jsonv2&limit=6&q="+encodeURIComponent(q),{signal,headers:{"Accept-Language":"en"}});
+ if(!r.ok)throw new Error("Place search unavailable");
+ return (await r.json()).map(x=>({lat:+x.lat,lon:+x.lon,label:x.display_name}));
 }
-
-
-/* =========================================================
-   NOMINATIM SEARCH
-========================================================= */
-
-async function searchPlaces(
-  query
-){
-
-  const response =
-    await fetch(
-      "https://nominatim.openstreetmap.org/search" +
-      "?format=json" +
-      "&limit=5" +
-      "&q=" +
-      encodeURIComponent(query)
-    );
-
-
-  const data =
-    await response.json();
-
-
-  return data.map(
-    item => ({
-
-      lat:
-        parseFloat(item.lat),
-
-      lon:
-        parseFloat(item.lon),
-
-      label:
-        item.display_name
-
-    })
-  );
-
+function setupAutocomplete(inputId,boxId,kind){
+ const input=$(inputId),box=$(boxId);let timer;
+ input.addEventListener("input",()=>{
+  clearTimeout(timer);S.searchControllers[kind]?.abort();
+  const q=input.value.trim();if(kind==="origin")S.origin=null;else S.destination=null;
+  if(q.length<3){box.classList.remove("show");return}
+  const seq=S.searchSequence[kind]=(S.searchSequence[kind]||0)+1;
+  timer=setTimeout(async()=>{
+   const controller=new AbortController();S.searchControllers[kind]=controller;
+   try{
+    const results=await geocode(q,controller.signal);if(S.searchSequence[kind]!==seq)return;
+    box.innerHTML="";
+    results.forEach(place=>{const el=document.createElement("div");el.className="suggestion";el.textContent=place.label;el.onclick=()=>{input.value=place.label;box.classList.remove("show");if(kind==="origin")S.origin=place;else S.destination=place};box.appendChild(el)});
+    box.classList.toggle("show",results.length>0);
+   }catch(e){if(e.name!=="AbortError")box.classList.remove("show")}
+  },350);
+ });
+ input.addEventListener("keydown",e=>{if(e.key==="Enter")navigate()});
 }
-
-
-/* =========================================================
-   SEARCH SUGGESTIONS
-========================================================= */
-
-function setupSearch(
-  input,
-  suggestions,
-  callback
-){
-
-  let timer = null;
-
-
-  input.addEventListener(
-    "input",
-    () => {
-
-      clearTimeout(timer);
-
-
-      const query =
-        input.value.trim();
-
-
-      if(query.length < 3){
-
-        suggestions.classList.remove(
-          "show"
-        );
-
-        return;
-
-      }
-
-
-      timer =
-        setTimeout(
-          async () => {
-
-            try{
-
-              const results =
-                await searchPlaces(
-                  query
-                );
-
-
-              suggestions.innerHTML =
-                "";
-
-
-              results.forEach(
-                place => {
-
-                  const item =
-                    document.createElement(
-                      "div"
-                    );
-
-
-                  item.className =
-                    "suggestion-item";
-
-
-                  item.textContent =
-                    place.label;
-
-
-                  item.addEventListener(
-                    "click",
-                    () => {
-
-                      input.value =
-                        place.label;
-
-                      callback(
-                        place
-                      );
-
-                      suggestions.classList.remove(
-                        "show"
-                      );
-
-                    }
-                  );
-
-
-                  suggestions.appendChild(
-                    item
-                  );
-
-                }
-              );
-
-
-              if(results.length){
-
-                suggestions.classList.add(
-                  "show"
-                );
-
-              }
-
-            }catch(error){
-
-              suggestions.classList.remove(
-                "show"
-              );
-
-            }
-
-          },
-          350
-        );
-
-    }
-
-  );
-
-}
-
-
-setupSearch(
-  originInput,
-  document.getElementById(
-    "originSuggest"
-  ),
-  place => {
-
-    selectedOrigin =
-      place;
-
-  }
-);
-
-
-setupSearch(
-  destInput,
-  document.getElementById(
-    "destSuggest"
-  ),
-  place => {
-
-    selectedDest =
-      place;
-
-  }
-);
-
-
-/* =========================================================
-   GEOCODE
-========================================================= */
-
-async function geocode(
-  text
-){
-
-  const results =
-    await searchPlaces(
-      text
-    );
-
-
-  if(!results.length){
-
-    throw new Error(
-      "Could not find " +
-      text
-    );
-
-  }
-
-
-  return results[0];
-
-}
-
-
-/* =========================================================
-   RESOLVE ORIGIN
-========================================================= */
-
+setupAutocomplete("origin","originSuggest","origin");setupAutocomplete("dest","destSuggest","destination");
+document.addEventListener("click",e=>{if(!e.target.closest("#origin,#originSuggest"))$("originSuggest").classList.remove("show");if(!e.target.closest("#dest,#destSuggest"))$("destSuggest").classList.remove("show")});
 async function resolveOrigin(){
-
-  const value =
-    originInput.value.trim();
-
-
-  if(
-    value ===
-    "My current location"
-  ){
-
-    if(!gpsCoords){
-
-      throw new Error(
-        "Waiting for your GPS location."
-      );
-
-    }
-
-
-    return {
-
-      lat:gpsCoords[0],
-      lon:gpsCoords[1],
-      label:"Your location"
-
-    };
-
-  }
-
-
-  if(selectedOrigin){
-
-    return selectedOrigin;
-
-  }
-
-
-  return await geocode(
-    value
-  );
-
+ if($("origin").value.trim()==="My current location"||!$("origin").value.trim()){startGPS();if(!S.gps)await waitGPS();return {lat:S.gps[0],lon:S.gps[1],label:"Your location"}}
+ return S.origin||((await geocode($("origin").value.trim()))[0]);
 }
-
-
-/* =========================================================
-   RESOLVE DESTINATION
-========================================================= */
-
-async function resolveDestination(){
-
-  if(selectedDest){
-
-    return selectedDest;
-
-  }
-
-
-  return await geocode(
-    destInput.value.trim()
-  );
-
+async function resolveDestination(){if(S.destination)return S.destination;const r=await geocode($("dest").value.trim());if(!r.length)throw new Error("Destination not found.");return S.destination=r[0]}
+async function getRoutes(a,b){
+ const url=ROUTER+"/route/v1/driving/"+a.lon+","+a.lat+";"+b.lon+","+b.lat+"?overview=full&geometries=geojson&steps=true&alternatives=true";
+ const r=await fetch(url);if(!r.ok)throw new Error("Routing service unavailable.");const d=await r.json();if(d.code!=="Ok"||!d.routes?.length)throw new Error("No route found.");return d.routes;
 }
-
-
-/* =========================================================
-   CLEAR ROUTE
-========================================================= */
-
-function clearRoute(){
-
-  if(traveledLine){
-
-    map.removeLayer(
-      traveledLine
-    );
-
-    traveledLine =
-      null;
-
-  }
-
-
-  if(remainingLine){
-
-    map.removeLayer(
-      remainingLine
-    );
-
-    remainingLine =
-      null;
-
-  }
-
-
-  if(originMarker){
-
-    map.removeLayer(
-      originMarker
-    );
-
-    originMarker =
-      null;
-
-  }
-
-
-  if(destinationMarker){
-
-    map.removeLayer(
-      destinationMarker
-    );
-
-    destinationMarker =
-      null;
-
-  }
-
-
-  currentRoute =
-    null;
-
-  currentSteps =
-    [];
-
-  routeCoordinates =
-    [];
-
-  currentStepIndex =
-    0;
-
-  activeDestination =
-    null;
-
-  liveRouting =
-    false;
-
-
-  navInfo.style.display =
-    "none";
-
-  nextTurn.style.display =
-    "none";
-
+function stepsFor(route){return (route.legs||[]).flatMap(l=>l.steps||[])}
+function maneuver(s){
+ const m=s?.maneuver||{},t=m.type||"",d=m.modifier||"";
+ if(t==="arrive")return ["●","You have arrived"];
+ if(t==="depart")return ["↑","Start driving"];
+ if(t==="uturn")return ["⟲","Make a U-turn"];
+ if(t==="roundabout")return ["⟳","Take the roundabout"];
+ if(d.includes("left"))return ["↰",t==="merge"?"Merge left":"Turn left"];
+ if(d.includes("right"))return ["↱",t==="merge"?"Merge right":"Turn right"];
+ if(t==="merge")return ["↑","Merge"];
+ if(t==="fork")return ["⑂","At the fork"];
+ if(t==="on ramp")return ["↗","Take the ramp"];
+ if(t==="off ramp")return ["↗","Take the exit"];
+ return ["↑","Continue straight"];
 }
-
-
-/* =========================================================
-   OSRM ROUTE
-========================================================= */
-
-async function requestRoute(
-  start,
-  destination
-){
-
-  const url =
-    "https://router.project-osrm.org/route/v1/driving/" +
-
-    start.lon + "," +
-    start.lat + ";" +
-
-    destination.lon + "," +
-    destination.lat +
-
-    "?overview=full" +
-    "&geometries=geojson" +
-    "&steps=true";
-
-
-  const response =
-    await fetch(url);
-
-
-  const data =
-    await response.json();
-
-
-  if(
-    data.code !== "Ok" ||
-    !data.routes ||
-    !data.routes.length
-  ){
-
-    throw new Error(
-      "No route was found."
-    );
-
-  }
-
-
-  return data.routes[0];
-
+function renderRouteChoices(){
+ const box=$("routeChoices");box.innerHTML="";
+ S.routes.forEach((r,i)=>{
+  const el=document.createElement("div");el.className="routeChoice"+(i===S.routeIndex?" selected":"");
+  el.innerHTML="<b>"+(i===0?"Recommended":"Alternative "+i)+"</b><div>"+distText(r.distance)+" · "+timeText(r.duration)+"</div>";
+  el.onclick=()=>{S.routeIndex=i;S.route=r;S.steps=stepsFor(r);S.stepIndex=0;S.progress=0;S.spokenStep=-1;drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();updateNextTurn()};
+  box.appendChild(el);
+ });
 }
-
-
-/* =========================================================
-   DRAW ROUTE
-========================================================= */
-
-function drawRoute(
-  route
-){
-
-  routeCoordinates =
-    route.geometry.coordinates.map(
-      point => [
-        point[1],
-        point[0]
-      ]
-    );
-
-
-  /*
-     Remove old lines.
-  */
-
-  if(traveledLine){
-
-    map.removeLayer(
-      traveledLine
-    );
-
-  }
-
-
-  if(remainingLine){
-
-    map.removeLayer(
-      remainingLine
-    );
-
-  }
-
-
-  /*
-     Gray traveled route.
-  */
-
-  traveledLine =
-    L.polyline(
-      [],
-      {
-        color:"#8a8a8a",
-        weight:6,
-        opacity:.8
-      }
-    ).addTo(map);
-
-
-  /*
-     Blue remaining route.
-  */
-
-  remainingLine =
-    L.polyline(
-      routeCoordinates,
-      {
-        color:"#4285F4",
-        weight:6,
-        opacity:.95
-      }
-    ).addTo(map);
-
+function renderDirections(){
+ const box=$("directionsContent");box.innerHTML="";
+ S.steps.forEach(s=>{const [ico,label]=maneuver(s),el=document.createElement("div");el.className="step";const a=document.createElement("div");a.className="stepIcon";a.textContent=ico;const b=document.createElement("div"),strong=document.createElement("b"),small=document.createElement("div");strong.textContent=label+(s.name?" onto "+s.name:"");small.className="muted";small.textContent=distText(s.distance||0)+" · "+timeText(s.duration||0);b.append(strong,small);el.append(a,b);box.appendChild(el)});
 }
-
-
-/* =========================================================
-   FIND CLOSEST ROUTE POINT
-========================================================= */
-
-function findClosestRoutePoint(
-  position
-){
-
-  let closestIndex = 0;
-
-  let closestDistance =
-    Infinity;
-
-
-  for(
-    let i=0;
-    i<routeCoordinates.length;
-    i++
-  ){
-
-    const d =
-      distanceMeters(
-        position,
-        routeCoordinates[i]
-      );
-
-
-    if(d < closestDistance){
-
-      closestDistance =
-        d;
-
-      closestIndex =
-        i;
-
-    }
-
-  }
-
-
-  return {
-
-    index:
-      closestIndex,
-
-    distance:
-      closestDistance
-
-  };
-
+function updateStep(){
+ if(!S.steps.length||!S.gps)return;
+ for(let i=S.stepIndex;i<S.steps.length;i++){
+  const loc=S.steps[i].maneuver?.location;if(!loc)continue;
+  const d=dist(S.gps,[loc[1],loc[0]]);
+  if(d>18||S.steps[i].maneuver.type==="arrive"){S.stepIndex=i;break}
+  S.stepIndex=Math.min(i+1,S.steps.length-1);
+ }
 }
-
-
-/* =========================================================
-   UPDATE GRAY/BLUE ROUTE
-========================================================= */
-
-function updateRouteProgress(){
-
-  if(
-    !gpsCoords ||
-    !routeCoordinates.length
-  ){
-
-    return;
-
-  }
-
-
-  const closest =
-    findClosestRoutePoint(
-      gpsCoords
-    );
-
-
-  const index =
-    closest.index;
-
-
-  /*
-     Everything before the car
-     becomes gray.
-  */
-
-  const traveled =
-    routeCoordinates.slice(
-      0,
-      index + 1
-    );
-
-
-  /*
-     Everything ahead stays blue.
-  */
-
-  const remaining =
-    routeCoordinates.slice(
-      index
-    );
-
-
-  /*
-     Make sure the actual GPS position
-     is included at the split.
-  */
-
-  traveled.push(
-    gpsCoords
-  );
-
-
-  remaining.unshift(
-    gpsCoords
-  );
-
-
-  if(traveled.length >= 2){
-
-    traveledLine.setLatLngs(
-      traveled
-    );
-
-  }
-
-
-  if(remaining.length >= 2){
-
-    remainingLine.setLatLngs(
-      remaining
-    );
-
-  }
-
-
-  /*
-     Save the current step position.
-  */
-
-  updateCurrentStep(
-    index
-  );
-
-}
-
-
-/* =========================================================
-   STEP DATA
-========================================================= */
-
-function getAllSteps(
-  route
-){
-
-  const steps = [];
-
-
-  if(
-    !route.legs ||
-    !route.legs.length
-  ){
-
-    return steps;
-
-  }
-
-
-  route.legs.forEach(
-    leg => {
-
-      if(leg.steps){
-
-        leg.steps.forEach(
-          step => {
-
-            steps.push(
-              step
-            );
-
-          }
-        );
-
-      }
-
-    }
-  );
-
-
-  return steps;
-
-}
-
-
-/* =========================================================
-   UPDATE CURRENT STEP
-========================================================= */
-
-function updateCurrentStep(
-  routeIndex
-){
-
-  if(!currentSteps.length){
-
-    return;
-
-  }
-
-
-  /*
-     Determine which maneuver is
-     closest ahead of the car.
-  */
-
-  let best =
-    currentStepIndex;
-
-
-  for(
-    let i=currentStepIndex;
-    i<currentSteps.length;
-    i++
-  ){
-
-    const step =
-      currentSteps[i];
-
-
-    if(
-      !step.maneuver ||
-      !step.maneuver.location
-    ){
-
-      continue;
-
-    }
-
-
-    const location = [
-
-      step.maneuver.location[1],
-
-      step.maneuver.location[0]
-
-    ];
-
-
-    const d =
-      distanceMeters(
-        gpsCoords,
-        location
-      );
-
-
-    if(d > 12){
-
-      best =
-        i;
-
-      break;
-
-    }
-
-
-    /*
-       If we are very close to the
-       maneuver, move to the next one.
-    */
-
-    if(i+1 < currentSteps.length){
-
-      best =
-        i+1;
-
-    }
-
-  }
-
-
-  currentStepIndex =
-    Math.min(
-      best,
-      currentSteps.length-1
-    );
-
-}
-
-
-/* =========================================================
-   TURN TYPE
-========================================================= */
-
-function maneuverInfo(
-  step
-){
-
-  if(
-    !step ||
-    !step.maneuver
-  ){
-
-    return {
-
-      icon:"↑",
-
-      type:"Continue straight"
-
-    };
-
-  }
-
-
-  const type =
-    step.maneuver.type || "";
-
-  const modifier =
-    step.maneuver.modifier || "";
-
-
-  if(type === "arrive"){
-
-    return {
-
-      icon:"●",
-
-      type:"You have arrived"
-
-    };
-
-  }
-
-
-  if(type === "uturn"){
-
-    return {
-
-      icon:"⟳",
-
-      type:"Make a U-turn"
-
-    };
-
-  }
-
-
-  if(
-    modifier.includes("left")
-  ){
-
-    if(type === "roundabout"){
-
-      return {
-
-        icon:"↶",
-
-        type:"Take the roundabout"
-
-      };
-
-    }
-
-
-    return {
-
-      icon:"↰",
-
-      type:
-        type === "merge"
-          ? "Merge left"
-          : "Turn left"
-
-    };
-
-  }
-
-
-  if(
-    modifier.includes("right")
-  ){
-
-    if(type === "roundabout"){
-
-      return {
-
-        icon:"↷",
-
-        type:"Take the roundabout"
-
-      };
-
-    }
-
-
-    return {
-
-      icon:"↱",
-
-      type:
-        type === "merge"
-          ? "Merge right"
-          : "Turn right"
-
-    };
-
-  }
-
-
-  if(
-    type === "roundabout"
-  ){
-
-    return {
-
-      icon:"⟳",
-
-      type:"Enter roundabout"
-
-    };
-
-  }
-
-
-  if(
-    type === "merge"
-  ){
-
-    return {
-
-      icon:"↑",
-
-      type:"Merge"
-
-    };
-
-  }
-
-
-  return {
-
-    icon:"↑",
-
-    type:"Continue straight"
-
-  };
-
-}
-
-
-/* =========================================================
-   FORMAT DISTANCE
-========================================================= */
-
-function formatDistance(
-meters
-){
-
-  if(
-    meters < 1000
-  ){
-
-    return (
-      Math.max(
-        10,
-        Math.round(
-          meters / 10
-        ) * 10
-      ) +
-      " ft"
-    );
-
-  }
-
-
-  return (
-    (meters / 1609.34)
-      .toFixed(
-        meters < 3000 ? 1 : 1
-      ) +
-    " mi"
-  );
-
-}
-
-
-/* =========================================================
-   NEXT TURN
-========================================================= */
-
 function updateNextTurn(){
-
-  if(
-    !currentSteps.length ||
-    !gpsCoords
-  ){
-
-    return;
-
-  }
-
-
-  let nextStep = null;
-
-  let nextIndex =
-    currentStepIndex;
-
-
-  /*
-     Find the next actual maneuver.
-  */
-
-  for(
-    let i=currentStepIndex;
-    i<currentSteps.length;
-    i++
-  ){
-
-    const step =
-      currentSteps[i];
-
-
-    if(
-      !step.maneuver ||
-      !step.maneuver.location
-    ){
-
-      continue;
-
-    }
-
-
-    const location = [
-
-      step.maneuver.location[1],
-
-      step.maneuver.location[0]
-
-    ];
-
-
-    const d =
-      distanceMeters(
-        gpsCoords,
-        location
-      );
-
-
-    if(
-      d > 12 ||
-      step.maneuver.type === "arrive"
-    ){
-
-      nextStep =
-        step;
-
-      nextIndex =
-        i;
-
-      break;
-
-    }
-
-  }
-
-
-  if(!nextStep){
-
-    nextTurn.style.display =
-      "none";
-
-    return;
-
-  }
-
-
-  currentStepIndex =
-    nextIndex;
-
-
-  const location = [
-
-    nextStep.maneuver.location[1],
-
-    nextStep.maneuver.location[0]
-
-  ];
-
-
-  const distance =
-    distanceMeters(
-      gpsCoords,
-      location
-    );
-
-
-  const info =
-    maneuverInfo(
-      nextStep
-    );
-
-
-  document.getElementById(
-    "turnIcon"
-  ).textContent =
-    info.icon;
-
-
-  document.getElementById(
-    "turnDistance"
-  ).textContent =
-    formatDistance(
-      distance
-    );
-
-
-  document.getElementById(
-    "turnType"
-  ).textContent =
-    info.type;
-
-
-  const road =
-    nextStep.name ||
-    nextStep.ref ||
-    "";
-
-
-  document.getElementById(
-    "turnRoad"
-  ).textContent =
-    road
-      ? "onto " + road
-      : "";
-
-
-  nextTurn.style.display =
-    "block";
-
+ if(!S.live||!S.gps||!S.steps.length)return;
+ updateStep();const s=S.steps[S.stepIndex];if(!s)return;
+ const loc=s.maneuver?.location,d=loc?dist(S.gps,[loc[1],loc[0]]):s.distance||0,[ico,label]=maneuver(s);
+ $("turnIcon").textContent=ico;$("turnDistance").textContent=s.maneuver?.type==="arrive"?"Destination":distText(d);$("turnType").textContent=label;$("turnRoad").textContent=s.name?"onto "+s.name:"";$("nextTurn").style.display="block";
+ if(S.voice&&S.spokenStep!==S.stepIndex&&d<120){S.spokenStep=S.stepIndex;if("speechSynthesis"in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(label+(s.name?" onto "+s.name:"")))}}
 }
-
-
-/* =========================================================
-   NAVIGATION INFO
-========================================================= */
-
-function updateNavigationInfo(){
-
-  if(
-    !currentRoute ||
-    !gpsCoords ||
-    !activeDestination
-  ){
-
-    return;
-
-  }
-
-
-  const now =
-    Date.now();
-
-
-  /*
-     Avoid sending routing requests
-     on every GPS event.
-  */
-
-  if(
-    now-lastRouteUpdate <
-    5000
-  ){
-
-    return;
-
-  }
-
-
-  lastRouteUpdate =
-    now;
-
-
-  const start = {
-
-    lat:gpsCoords[0],
-
-    lon:gpsCoords[1]
-
-  };
-
-
-  requestRoute(
-    start,
-    activeDestination
-  )
-  .then(
-    route => {
-
-      if(!liveRouting){
-
-        return;
-
-      }
-
-
-      const minutes =
-        Math.max(
-          0,
-          Math.round(
-            route.duration / 60
-          )
-        );
-
-
-      const miles =
-        route.distance /
-        1609.34;
-
-
-      const eta =
-        new Date(
-          Date.now() +
-          route.duration * 1000
-        );
-
-
-      document.getElementById(
-        "etaValue"
-      ).textContent =
-        eta.toLocaleTimeString(
-          [],
-          {
-            hour:"numeric",
-            minute:"2-digit"
-          }
-        );
-
-
-      if(minutes >= 60){
-
-        const hours =
-          Math.floor(
-            minutes / 60
-          );
-
-        const mins =
-          minutes % 60;
-
-
-        document.getElementById(
-          "timeValue"
-        ).textContent =
-          hours +
-          " hr " +
-          mins +
-          " min";
-
-      }else{
-
-        document.getElementById(
-          "timeValue"
-        ).textContent =
-          minutes +
-          " min";
-
-      }
-
-
-      document.getElementById(
-        "distanceValue"
-      ).textContent =
-        miles.toFixed(1) +
-        " mi";
-
-    }
-  )
-  .catch(
-    () => {}
-  );
-
+function updateNavInfo(){
+ if(!S.route)return;
+ let remaining=S.route.duration,meters=S.route.distance;
+ if(S.gps&&S.coords.length){let left=0;for(let i=S.progress;i<S.coords.length-1;i++)left+=dist(S.coords[i],S.coords[i+1]);meters=left;remaining=S.route.duration*left/Math.max(1,S.route.distance)}
+ $("etaValue").textContent=new Date(Date.now()+remaining*1000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});$("timeValue").textContent=timeText(remaining);$("distanceValue").textContent=distText(meters);
 }
-
-
-/* =========================================================
-   OFF-ROUTE CHECK
-========================================================= */
+function saveHistory(a,b){
+ S.history=[{from:a.label,to:b.label,lat:b.lat,lon:b.lon,time:Date.now()},...S.history.filter(x=>x.to!==b.label)].slice(0,20);
+ localStorage.setItem("horizonmaps_history",JSON.stringify(S.history));
+}
+async function navigate(){
+ const dest=$("dest").value.trim();if(!dest){status("Enter a destination.",true);return}
+ $("routeBtn").disabled=true;status("Finding route...");
+ try{
+  const a=await resolveOrigin(),b=await resolveDestination();S.origin=a;S.destination=b;
+  S.routes=await getRoutes(a,b);S.routeIndex=0;S.route=S.routes[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
+  S.live=$("origin").value.trim()==="My current location"||!!S.gps;
+  if(S.live){startGPS();S.following=true}
+  drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();
+  $("navInfo").style.display="flex";$("stopBtn").style.display="inline-block";$("nextTurn").style.display=S.live?"block":"none";
+  saveHistory(a,b);status("Route ready · "+S.routes.length+" option"+(S.routes.length===1?"":"s"));
+  if(S.gps){updateProgress();updateNextTurn()}
+ }catch(e){status(e.message||"Could not create route.",true)}
+ finally{$("routeBtn").disabled=false}
+}
+$("routeBtn").onclick=navigate;
+function stopNavigation(){
+ S.live=false;S.following=false;S.route=null;S.routes=[];S.steps=[];S.coords=[];S.progress=0;
+ $("navInfo").style.display="none";$("nextTurn").style.display="none";$("stopBtn").style.display="none";
+ clearLines();if(S.destinationMarker){map.removeLayer(S.destinationMarker);S.destinationMarker=null}
+ if("speechSynthesis"in window)speechSynthesis.cancel();status("Navigation stopped.");
+}
+$("stopBtn").onclick=stopNavigation;
 
 function checkOffRoute(){
-
-  if(
-    !gpsCoords ||
-    !routeCoordinates.length ||
-    !liveRouting ||
-    rerouting
-  ){
-
-    return;
-
-  }
-
-
-  const closest =
-    findClosestRoutePoint(
-      gpsCoords
-    );
-
-
-  /*
-     Ignore GPS accuracy if the
-     reported GPS accuracy itself
-     is large.
-  */
-
-  const threshold =
-    Math.max(
-      OFF_ROUTE_DISTANCE,
-      gpsAccuracy * 1.5
-    );
-
-
-  if(
-    closest.distance >
-    threshold
-  ){
-
-    const now =
-      Date.now();
-
-
-    if(
-      now-lastRerouteTime <
-      REROUTE_COOLDOWN
-    ){
-
-      return;
-
-    }
-
-
-    reroute();
-
-  }
-
+ if(!S.live||!S.gps||!S.coords.length||S.rerouting)return;
+ let nearest=Infinity;for(let i=Math.max(0,S.progress-4);i<Math.min(S.coords.length,S.progress+100);i++)nearest=Math.min(nearest,dist(S.gps,S.coords[i]));
+ if(nearest>Math.max(55,S.accuracy*1.5)&&Date.now()-S.lastReroute>12000)reroute();
 }
-
-
-/* =========================================================
-   AUTOMATIC REROUTE
-========================================================= */
-
 async function reroute(){
-
-  if(
-    !gpsCoords ||
-    !activeDestination ||
-    rerouting
-  ){
-
-    return;
-
-  }
-
-
-  rerouting =
-    true;
-
-
-  lastRerouteTime =
-    Date.now();
-
-
-  setStatus(
-    "You are off route. Finding a new route..."
-  );
-
-
-  try{
-
-    const start = {
-
-      lat:gpsCoords[0],
-
-      lon:gpsCoords[1],
-
-      label:"Your location"
-
-    };
-
-
-    const route =
-      await requestRoute(
-        start,
-        activeDestination
-      );
-
-
-    /*
-       Replace the current route.
-    */
-
-    currentRoute =
-      route;
-
-
-    currentSteps =
-      getAllSteps(
-        route
-      );
-
-
-    currentStepIndex =
-      0;
-
-
-    drawRoute(
-      route
-    );
-
-
-    updateRouteProgress();
-
-    updateNextTurn();
-
-
-    /*
-       Recenter around the new route.
-    */
-
-    if(routeCoordinates.length){
-
-      map.fitBounds(
-        L.latLngBounds(
-          routeCoordinates
-        ),
-        {
-          padding:[100,100]
-        }
-      );
-
-    }
-
-
-    setStatus(
-      "New route found."
-    );
-
-
-    /*
-       Immediately update ETA.
-    */
-
-    lastRouteUpdate =
-      0;
-
-    updateNavigationInfo();
-
-  }catch(error){
-
-    setStatus(
-      "Could not find a new route.",
-      true
-    );
-
-  }finally{
-
-    rerouting =
-      false;
-
-  }
-
+ if(!S.gps||!S.destination||S.rerouting)return;S.rerouting=true;S.lastReroute=Date.now();status("Off route · finding a new route...");
+ try{
+  S.routes=await getRoutes({lat:S.gps[0],lon:S.gps[1]},S.destination);S.routeIndex=0;S.route=S.routes[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
+  drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();status("New route found.");
+ }catch(e){status("Could not recalculate route.",true)}finally{S.rerouting=false}
 }
 
-
-/* =========================================================
-   ROUTE BUTTON
-========================================================= */
-
-routeButton.addEventListener(
-  "click",
-  startNavigation
-);
-
-
-/* =========================================================
-   START NAVIGATION
-========================================================= */
-
-async function startNavigation(){
-
-  const destinationText =
-    destInput.value.trim();
-
-
-  if(!destinationText){
-
-    setStatus(
-      "Enter a destination.",
-      true
-    );
-
-    return;
-
-  }
-
-
-  routeButton.disabled =
-    true;
-
-
-  try{
-
-    clearRoute();
-
-
-    const originText =
-      originInput.value.trim();
-
-
-    /*
-       Current location.
-    */
-
-    if(
-      originText ===
-      "My current location"
-    ){
-
-      startLocationTracking();
-
-      followingUser =
-        true;
-
-
-      if(!gpsCoords){
-
-        setStatus(
-          "Waiting for your location..."
-        );
-
-
-        await waitForGPS();
-
-      }
-
-    }
-
-
-    setStatus(
-      "Finding starting point..."
-    );
-
-
-    const origin =
-      await resolveOrigin();
-
-
-    setStatus(
-      "Finding destination..."
-    );
-
-
-    const destination =
-      await resolveDestination();
-
-
-    activeDestination =
-      destination;
-
-
-    setStatus(
-      "Calculating route..."
-    );
-
-
-    const route =
-      await requestRoute(
-        origin,
-        destination
-      );
-
-
-    currentRoute =
-      route;
-
-
-    currentSteps =
-      getAllSteps(
-        route
-      );
-
-
-    currentStepIndex =
-      0;
-
-
-    /*
-       Draw the route.
-    */
-
-    drawRoute(
-      route
-    );
-
-
-    /*
-       Destination marker.
-    */
-
-    destinationMarker =
-      L.marker([
-        destination.lat,
-        destination.lon
-      ])
-      .addTo(map);
-
-
-    destinationMarker.bindPopup(
-      "<b>Destination</b><br>" +
-      destination.label
-    );
-
-
-    /*
-       Start marker only if
-       this isn't the live car.
-    */
-
-    if(
-      origin.label !==
-      "Your location"
-    ){
-
-      originMarker =
-        L.marker([
-          origin.lat,
-          origin.lon
-        ])
-        .addTo(map);
-
-    }
-
-
-    /*
-       Navigation cards.
-    */
-
-    const miles =
-      route.distance /
-      1609.34;
-
-
-    const minutes =
-      Math.round(
-        route.duration / 60
-      );
-
-
-    const eta =
-      new Date(
-        Date.now() +
-        route.duration * 1000
-      );
-
-
-    document.getElementById(
-      "etaValue"
-    ).textContent =
-      eta.toLocaleTimeString(
-        [],
-        {
-          hour:"numeric",
-          minute:"2-digit"
-        }
-      );
-
-
-    if(minutes >= 60){
-
-      const hours =
-        Math.floor(
-          minutes / 60
-        );
-
-      const mins =
-        minutes % 60;
-
-
-      document.getElementById(
-        "timeValue"
-      ).textContent =
-        hours +
-        " hr " +
-        mins +
-        " min";
-
-    }else{
-
-      document.getElementById(
-        "timeValue"
-      ).textContent =
-        minutes +
-        " min";
-
-    }
-
-
-    document.getElementById(
-      "distanceValue"
-    ).textContent =
-      miles.toFixed(1) +
-      " mi";
-
-
-    navInfo.style.display =
-      "flex";
-
-
-    /*
-       Enable live navigation.
-    */
-
-    liveRouting =
-      true;
-
-
-    followingUser =
-      origin.label ===
-      "Your location";
-
-
-    /*
-       Update route progress.
-    */
-
-    if(gpsCoords){
-
-      updateRouteProgress();
-
-    }
-
-
-    updateNextTurn();
-
-
-    /*
-       Fit route.
-    */
-
-    if(routeCoordinates.length){
-
-      map.fitBounds(
-        L.latLngBounds(
-          routeCoordinates
-        ),
-        {
-          padding:[100,100]
-        }
-      );
-
-    }
-
-
-    setStatus(
-      "Navigation active."
-    );
-
-
-    /*
-       If starting from GPS, immediately
-       update the route cards.
-    */
-
-    if(gpsCoords){
-
-      lastRouteUpdate =
-        0;
-
-      updateNavigationInfo();
-
-    }
-
-  }catch(error){
-
-    setStatus(
-      error.message ||
-      "Could not create route.",
-      true
-    );
-
-  }finally{
-
-    routeButton.disabled =
-      false;
-
-  }
-
+function loadStored(){
+ try{S.history=JSON.parse(localStorage.getItem("horizonmaps_history")||"[]")}catch{}
+ try{S.saved=JSON.parse(localStorage.getItem("horizonmaps_saved")||"[]")}catch{}
 }
+function showHistory(){
+ const box=$("historyContent");box.innerHTML="";
+ if(!S.history.length){box.textContent="No recent routes yet.";return}
+ S.history.forEach(h=>{
+  const el=document.createElement("div");el.className="historyItem";const text=document.createElement("div"),b=document.createElement("b"),small=document.createElement("div"),btn=document.createElement("button");
+  b.textContent=h.to;small.className="muted";small.textContent="From "+h.from+" · "+new Date(h.time).toLocaleDateString();btn.className="btn";btn.textContent="Route";
+  btn.onclick=()=>{$("dest").value=h.to;S.destination={lat:h.lat,lon:h.lon,label:h.to};$("history").style.display="none";navigate()};
+  text.append(b,small);el.append(text,btn);box.append(el);
+ });
+ const clear=document.createElement("button");clear.className="btn danger";clear.textContent="Clear history";clear.onclick=()=>{S.history=[];localStorage.removeItem("horizonmaps_history");showHistory()};box.append(clear);
+}
+function showSaved(){
+ const box=$("placesContent");box.innerHTML="";
+ if(!S.saved.length){box.textContent="No saved places yet. Choose a destination and tap Save.";return}
+ S.saved.forEach(p=>{
+  const el=document.createElement("div");el.className="placeItem";const name=document.createElement("b");name.textContent=p.label;
+  const go=document.createElement("button");go.className="btn";go.textContent="Route";go.onclick=()=>{$("dest").value=p.label;S.destination=p;$("places").style.display="none";navigate()};
+  const del=document.createElement("button");del.className="btn";del.textContent="Remove";del.onclick=()=>{S.saved=S.saved.filter(x=>x.label!==p.label);localStorage.setItem("horizonmaps_saved",JSON.stringify(S.saved));showSaved()};
+  el.append(name,go,del);box.append(el);
+ });
+}
+$("saveBtn").onclick=()=>{if(!S.destination){status("Find a destination first.",true);return}if(!S.saved.some(x=>x.label===S.destination.label))S.saved.push(S.destination);localStorage.setItem("horizonmaps_saved",JSON.stringify(S.saved));status("Place saved on this device.")};
+$("savedBtn").onclick=()=>{$("places").style.display="block";showSaved()};
+$("historyBtn").onclick=()=>{$("history").style.display="block";showHistory()};
+$("directionsBtn").onclick=()=>{$("directions").style.display=$("directions").style.display==="block"?"none":"block";renderDirections()};
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$(b.dataset.close).style.display="none");
+$("collapseBtn").onclick=()=>{$("searchPanel").classList.toggle("collapsed");$("collapseBtn").textContent=$("searchPanel").classList.contains("collapsed")?"+":"−"};
 
-
-/* =========================================================
-   ENTER KEY
-========================================================= */
-
-originInput.addEventListener(
-  "keydown",
-  event => {
-
-    if(event.key === "Enter"){
-
-      startNavigation();
-
-    }
-
-  }
-);
-
-
-destInput.addEventListener(
-  "keydown",
-  event => {
-
-    if(event.key === "Enter"){
-
-      startNavigation();
-
-    }
-
-  }
-);
-
-
-/* =========================================================
-   CLOSE SEARCH BOXES
-========================================================= */
-
-document.addEventListener(
-  "click",
-  event => {
-
-    if(
-      !originInput.contains(event.target)
-    ){
-
-      document
-        .getElementById(
-          "originSuggest"
-        )
-        .classList.remove(
-          "show"
-        );
-
-    }
-
-
-    if(
-      !destInput.contains(event.target)
-    ){
-
-      document
-        .getElementById(
-          "destSuggest"
-        )
-        .classList.remove(
-          "show"
-        );
-
-    }
-
-  }
-);
-
-
-/* =========================================================
-   CLEANUP
-========================================================= */
-
-window.addEventListener(
-  "beforeunload",
-  () => {
-
-    if(watchId !== null){
-
-      navigator.geolocation.clearWatch(
-        watchId
-      );
-
-    }
-
-
-    if(animationFrame){
-
-      cancelAnimationFrame(
-        animationFrame
-      );
-
-    }
-
-  }
-);
-
+$("voiceBtn").onclick=()=>{S.voice=!S.voice;$("voiceBtn").textContent=S.voice?"🔊 Voice on":"🔇 Voice off";if(!S.voice&&"speechSynthesis"in window)speechSynthesis.cancel()};
+$("trafficBtn").onclick=()=>alert("Live traffic is not supplied by standard OpenStreetMap map tiles or OSRM. This version does not invent traffic conditions; a regional public feed or a traffic provider integration is required.");
+async function nearby(){
+ $("places").style.display="block";$("placesContent").textContent="Searching nearby places...";
+ const c=S.gps||[map.getCenter().lat,map.getCenter().lng];
+ const q='[out:json][timeout:20];(node(around:1200,'+c[0]+','+c[1]+')[amenity];node(around:1200,'+c[0]+','+c[1]+')[shop];node(around:1200,'+c[0]+','+c[1]+')[tourism];);out 30;';
+ try{
+  const r=await fetch(OVERPASS,{method:"POST",body:"data="+encodeURIComponent(q)});if(!r.ok)throw Error();
+  const data=await r.json(),box=$("placesContent");box.innerHTML="";
+  (data.elements||[]).forEach(p=>{
+   const t=p.tags||{},name=t.name||t.amenity||t.shop||t.tourism||"Place",lat=p.lat,lon=p.lon;if(!lat||!lon)return;
+   const el=document.createElement("div");el.className="placeItem";const info=document.createElement("div"),b=document.createElement("b"),small=document.createElement("div"),btn=document.createElement("button");
+   b.textContent=name;small.className="muted";small.textContent=[t.amenity,t.shop,t.tourism].filter(Boolean).join(" · ");btn.className="btn";btn.textContent="Show";btn.onclick=()=>map.flyTo([lat,lon],17);
+   info.append(b,small);el.append(info,btn);box.append(el);
+  });
+  if(!box.children.length)box.textContent="No nearby places found.";
+ }catch(e){$("placesContent").textContent="Nearby search is temporarily unavailable."}
+}
+$("nearbyBtn").onclick=nearby;
+loadStored();
+setInterval(()=>{if(S.live){updateNavInfo();updateNextTurn()}},2500);
+window.addEventListener("beforeunload",()=>{if(S.watch!==null)navigator.geolocation.clearWatch(S.watch);cancelAnimationFrame(S.frame);if("speechSynthesis"in window)speechSynthesis.cancel()});
 </script>
-
 </body>
 </html>
