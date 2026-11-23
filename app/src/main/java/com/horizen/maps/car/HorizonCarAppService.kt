@@ -11,7 +11,9 @@ import androidx.car.app.model.Template
 
 class HorizonCarAppService : CarAppService() {
     override fun createHostValidator(): HostValidator {
-        return HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
+        return HostValidator.Builder(this)
+            .addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)
+            .build()
     }
 
     override fun onCreateSession(sessionInfo: SessionInfo): Session {
