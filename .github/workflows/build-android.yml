@@ -12,9 +12,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: horizonmaps-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -30,6 +35,9 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
+      - name: Run Android lint and unit tests
+        run: gradle --no-daemon :app:lintDebug :app:testDebugUnitTest
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
@@ -39,4 +47,4 @@ jobs:
           name: HorizonMaps-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
