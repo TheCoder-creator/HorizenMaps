@@ -26,7 +26,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 .navCard{flex:1;min-width:0;padding:8px 4px;text-align:center}.navLabel{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.6px}.navValue{margin-top:3px;font-size:16px;font-weight:800;white-space:nowrap}
 #nextTurn{display:none;position:absolute;z-index:6;top:12px;left:12px;transform:none;width:min(320px,calc(100vw - 24px));padding:12px;pointer-events:none}
 .turn{display:flex;align-items:center;gap:12px}.turnIcon{width:45px;height:45px;display:grid;place-items:center;border-radius:12px;background:var(--blue);color:#fff;font-size:26px}.turnDistance{font-size:21px;font-weight:800}.turnType{font-size:13px;color:var(--muted);margin-top:2px}.turnRoad{font-size:11px;color:var(--muted);margin-top:7px}
-#speedBox{position:absolute;z-index:4;bottom:16px;left:14px;min-width:92px;padding:8px 12px;text-align:center}#speedValue{font-size:23px;font-weight:800}#speedUnit{font-size:10px;color:var(--muted)}
+#speedBox,#limitBox{position:absolute;z-index:4;bottom:16px;min-width:92px;padding:8px 12px;text-align:center}#speedBox{left:14px}#limitBox{left:120px}#speedValue,#limitValue{font-size:23px;font-weight:800}#speedUnit,#limitUnit{font-size:10px;color:var(--muted)}
 #mapControls{position:absolute;z-index:4;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}#mapControls .btn{width:42px;height:40px;padding:0;font-size:17px}
 #bottomBar{position:absolute;z-index:4;right:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 130px)}#bottomBar .btn{box-shadow:var(--shadow)}
 .sheet{display:none;position:absolute;z-index:8;right:12px;top:12px;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;padding:13px}
@@ -44,7 +44,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  #mapControls .btn{width:38px;height:36px}
  #bottomBar{left:9px;right:55px;bottom:9px;justify-content:flex-start}
  #bottomBar .btn{padding:8px}
- #speedBox{bottom:135px;left:9px}
+ #speedBox{bottom:135px;left:9px} #limitBox{bottom:135px;left:112px}
  #directions,#places,#history{top:9px;right:9px;max-height:calc(100vh - 18px)}
  #directionsCancel{top:9px;left:9px}
 }
@@ -74,7 +74,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  <div class="navCard card"><div class="navLabel">Distance</div><div class="navValue" id="distanceValue">--</div></div>
 </div>
 <div id="nextTurn" class="card"><div class="turn"><div class="turnIcon" id="turnIcon">↑</div><div><div class="turnDistance" id="turnDistance">--</div><div class="turnType" id="turnType">Continue straight</div></div></div><div class="turnRoad" id="turnRoad"></div></div>
-<div id="speedBox" class="card"><div id="speedValue">--</div><div id="speedUnit">mph · GPS speed</div></div>
+<div id="speedBox" class="card"><div id="speedValue">--</div><div id="speedUnit">mph · GPS speed</div></div>\n<div id="limitBox" class="card"><div id="limitValue">--</div><div id="limitUnit">mph · speed limit</div></div>
 
 <div id="mapControls">
  <button class="btn" id="recenterBtn" title="Recenter">◎</button>
@@ -107,7 +107,7 @@ const S={
  marker:null,target:null,display:null,predictionAt:0,
  route:null,routes:[],routeIndex:0,steps:[],stepIndex:0,coords:[],progress:0,
  origin:null,destination:null,live:false,following:false,headingUp:true,dark:false,
- rerouting:false,lastReroute:0,offRouteSince:0,voice:true,spokenStep:-1,frame:0,history:[],saved:[],
+ rerouting:false,lastReroute:0,offRouteSince:0,voice:true,spokenStep:-1,frame:0,history:[],saved:[],routeMode:"fastest",lastLimitQuery:0,limitController:null,
  searchControllers:{},searchSequence:{},routeLine:null,alternativeLines:[],completedLine:null,
  destinationMarker:null
 };
@@ -221,7 +221,7 @@ function gpsUpdate(pos){
  }
  S.lastFix=p;S.lastFixAt=now;S.predictionAt=performance.now();S.gps=p;S.target=p;
  $("origin").value="My current location";S.origin={lat:p[0],lon:p[1],label:"Your location"};
- $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);
+ $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);\n if(now-S.lastLimitQuery>10000)updateSpeedLimit(p);
  if(S.live){updateProgress();updateNavInfo();updateNextTurn();checkOffRoute()}
 }
 function startGPS(){
@@ -290,6 +290,38 @@ async function getRoutes(a,b,quick=false){
  }catch(e){if(e.name==="AbortError")throw new Error("Route calculation timed out. Please try again.");throw e}
  finally{clearTimeout(timer)}
 }
+async function updateSpeedLimit(position){
+ if(!position||!S.live)return;
+ S.lastLimitQuery=Date.now();
+ S.limitController?.abort();
+ const controller=new AbortController();S.limitController=controller;
+ const timer=setTimeout(()=>controller.abort(),7000);
+ try{
+  const q='[out:json][timeout:8];way(around:35,'+position[0]+','+position[1]+')[highway][maxspeed];out tags geom;';
+  const response=await fetch(OVERPASS,{method:"POST",body:"data="+encodeURIComponent(q),signal:controller.signal});
+  if(!response.ok)throw new Error("Speed limit data unavailable");
+  const data=await response.json();
+  let best=null,bestDistance=Infinity;
+  for(const way of data.elements||[]){
+   const raw=way.tags?.maxspeed;if(!raw||!Array.isArray(way.geometry))continue;
+   const value=String(raw).split(";")[0].trim().toLowerCase();
+   const match=value.match(/^(\\d+(?:\\.\\d+)?)\\s*(mph|km\\/?h|kph)?$/);
+   if(!match)continue;
+   let mph=Number(match[1]);if(!match[2]||match[2].startsWith("km")||match[2]==="kph")mph*=0.621371;
+   if(!Number.isFinite(mph)||mph<=0||mph>150)continue;
+   for(const point of way.geometry){
+    const d=dist(position,[point.lat,point.lon]);
+    if(d<bestDistance){bestDistance=d;best=Math.round(mph)}
+   }
+  }
+  if(!controller.signal.aborted){
+   $("limitValue").textContent=best!==null&&bestDistance<=45?best:"--";
+   $("limitUnit").textContent=best!==null&&bestDistance<=45?"mph · OSM speed limit":"mph · limit unavailable";
+  }
+ }catch(e){
+  if(e.name!=="AbortError"){$("limitValue").textContent="--";$("limitUnit").textContent="mph · limit unavailable"}
+ }finally{clearTimeout(timer)}
+}
 function stepsFor(route){return (route.legs||[]).flatMap(l=>l.steps||[])}
 function maneuver(s){
  const m=s?.maneuver||{},t=m.type||"",d=m.modifier||"";
@@ -305,12 +337,36 @@ function maneuver(s){
  if(t==="off ramp")return ["↗","Take the exit"];
  return ["↑","Continue straight"];
 }
+function routeRank(mode){
+ const indexes=S.routes.map((r,i)=>({r,i}));
+ if(mode==="shortest")indexes.sort((a,b)=>a.r.distance-b.r.distance);
+ else if(mode==="fewest")indexes.sort((a,b)=>turnCount(a.r)-turnCount(b.r)||a.r.duration-b.r.duration);
+ else indexes.sort((a,b)=>a.r.duration-b.r.duration);
+ return indexes[0]?.i??0;
+}
+function turnCount(route){
+ return stepsFor(route).filter(s=>{
+  const t=s.maneuver?.type||"",m=s.maneuver?.modifier||"";
+  return !["depart","arrive","continue","new name"].includes(t)&&
+   (["turn","uturn","roundabout","rotary","fork","merge","on ramp","off ramp","exit roundabout"].includes(t)||m!=="straight");
+ }).length;
+}
+function selectRouteMode(mode){
+ S.routeMode=mode;S.routeIndex=routeRank(mode);S.route=S.routes[S.routeIndex];
+ S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
+ drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();updateNextTurn();
+}
 function renderRouteChoices(){
  const box=$("routeChoices");box.innerHTML="";
- S.routes.forEach((r,i)=>{
-  const el=document.createElement("div");el.className="routeChoice"+(i===S.routeIndex?" selected":"");
-  el.innerHTML="<b>"+(i===0?"Recommended":"Alternative "+i)+"</b><div>"+distText(r.distance)+" · "+timeText(r.duration)+"</div>";
-  el.onclick=()=>{S.routeIndex=i;S.route=r;S.steps=stepsFor(r);S.stepIndex=0;S.progress=0;S.spokenStep=-1;drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();updateNextTurn()};
+ if(!S.routes.length)return;
+ const modes=[["fastest","Fastest"],["shortest","Shortest"],["fewest","Fewer turns"]];
+ modes.forEach(([mode,label])=>{
+  const i=routeRank(mode),r=S.routes[i],el=document.createElement("div");
+  el.className="routeChoice"+(mode===S.routeMode?" selected":"");
+  const metric=mode==="fewest"?turnCount(r)+" turns":mode==="shortest"?distText(r.distance):timeText(r.duration);
+  const detail=mode==="fewest"?timeText(r.duration):mode==="shortest"?timeText(r.duration):distText(r.distance);
+  el.innerHTML="<b>"+label+(S.routes.length===1?" · only route available":"")+"</b><div>"+metric+" · "+detail+"</div>";
+  el.onclick=()=>selectRouteMode(mode);
   box.appendChild(el);
  });
 }
@@ -349,7 +405,7 @@ async function navigate(){
  $("routeBtn").disabled=true;status("Finding route...");
  try{
   const a=await resolveOrigin(),b=await resolveDestination();S.origin=a;S.destination=b;
-  S.routes=await getRoutes(a,b);S.routeIndex=0;S.route=S.routes[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
+  S.routes=await getRoutes(a,b);S.routeMode="fastest";S.routeIndex=routeRank("fastest");S.route=S.routes[S.routeIndex];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
   S.live=$("origin").value.trim()==="My current location"||!!S.gps;
   if(S.live){startGPS();S.following=true}
   $("searchPanel").style.display="none";
@@ -388,7 +444,7 @@ async function reroute(){
  S.rerouting=true;S.lastReroute=Date.now();S.offRouteSince=0;status("Off route · quickly recalculating...");
  try{
   const fresh=await getRoutes({lat:S.gps[0],lon:S.gps[1]},S.destination,true);
-  S.routes=fresh;S.routeIndex=0;S.route=fresh[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
+  S.routes=fresh;S.routeMode="fastest";S.routeIndex=routeRank("fastest");S.route=fresh[S.routeIndex];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
   drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();status("Route updated.");
  }catch(e){status(e.message||"Could not recalculate route.",true)}finally{S.rerouting=false}
 }
