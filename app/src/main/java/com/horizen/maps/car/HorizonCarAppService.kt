@@ -21,7 +21,7 @@ import androidx.car.app.Screen
 import androidx.car.app.Session
 import androidx.car.app.SessionInfo
 import androidx.car.app.SurfaceCallback
-import androidx.car.app.activity.renderer.surface.SurfaceContainer
+import androidx.car.app.SurfaceContainer
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
 import androidx.car.app.model.Template
@@ -141,16 +141,24 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
     }
 
     override fun onSurfaceAvailable(surfaceContainer: SurfaceContainer) {
-        mapSurface = surfaceContainer.surface
+        val nextSurface = surfaceContainer.surface
+        if (mapSurface !== nextSurface) {
+            mapSurface?.release()
+        }
+        mapSurface = nextSurface
         surfaceWidth = surfaceContainer.width
         surfaceHeight = surfaceContainer.height
         drawMap()
     }
 
     override fun onSurfaceDestroyed(surfaceContainer: SurfaceContainer) {
-        mapSurface = null
-        surfaceWidth = 0
-        surfaceHeight = 0
+        val destroyedSurface = surfaceContainer.surface
+        if (mapSurface === destroyedSurface) {
+            mapSurface = null
+            surfaceWidth = 0
+            surfaceHeight = 0
+        }
+        destroyedSurface?.release()
     }
 
     override fun onScroll(distanceX: Float, distanceY: Float) {
