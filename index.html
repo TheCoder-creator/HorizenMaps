@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://*.openstreetmap.org https://cdnjs.cloudflare.com; font-src 'self' data:; connect-src 'self' https://tile.openstreetmap.org https://*.openstreetmap.org https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://*.openstreetmap.org https://cdnjs.cloudflare.com; font-src 'self' data:; connect-src 'self' https://tile.openstreetmap.org https://*.openstreetmap.org https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta http-equiv="Permissions-Policy" content="geolocation=(self), camera=(), microphone=()">
 <title>HorizonMaps</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet-rotate@0.6.2/dist/leaflet-rotate.css'">
 <style>
 :root{--bg:#fff;--panel:#fff;--text:#17191d;--muted:#68717d;--border:#e1e5eb;--blue:#2878f0;--shadow:0 5px 24px #0002}
 *{box-sizing:border-box}html,body,#map{height:100%;width:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;color:var(--text)}body{overflow:hidden}#map{position:absolute;inset:0;z-index:0;background:#e9eef3}
@@ -97,8 +97,8 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 <div id="places" class="sheet"><div class="sheetHead"><strong>Places</strong><button class="btn" data-close="places">✕</button></div><div id="placesContent" class="muted">Nearby places will appear here.</div></div>
 <div id="history" class="sheet"><div class="sheetHead"><strong>Route history</strong><button class="btn" data-close="history">✕</button></div><div id="historyContent"></div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet-rotate@0.6.2/dist/leaflet-rotate.js'"></script>
 <script>
 const $=id=>document.getElementById(id);
 const ROUTER="https://router.project-osrm.org";
@@ -114,6 +114,8 @@ const S={
  destinationMarker:null
 };
 
+window.addEventListener("error",event=>{const box=document.getElementById("status");if(box){box.textContent="Map error: "+(event.message||"A map component failed to load.");box.className="error"}});
+if(!window.L){const box=document.getElementById("status");if(box){box.textContent="Map library failed to load. Check the connection and reload.";box.className="error"}throw new Error("Leaflet did not load")}
 const map=L.map("map",{
   rotate:true,
   bearing:0,
@@ -122,11 +124,16 @@ const map=L.map("map",{
   preferCanvas:true
 }).setView([37.3382,-121.8863],12);
 
-const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+const streetLayer=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
   maxZoom:19,
   attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 });
 streetLayer.addTo(map);
+map.whenReady(()=>setTimeout(()=>map.invalidateSize({pan:false}),80));
+window.addEventListener("resize",()=>map.invalidateSize({pan:false}));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>map.invalidateSize({pan:false}),120)});
+setTimeout(()=>map.invalidateSize({pan:false}),500);
+setTimeout(()=>map.invalidateSize({pan:false}),1500);
 streetLayer.on("tileerror",()=>{
  if(!S.tileErrorShown){S.tileErrorShown=true;status("Map tiles are not loading. Check the connection or map security settings.",true)}
 });
