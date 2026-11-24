@@ -17,12 +17,18 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.net.http.SslError
 import android.widget.TextView
+import java.net.URI
 
-internal fun isTrustedMapUri(uri: Uri): Boolean {
-    return uri.scheme.equals("https", ignoreCase = true) &&
-        uri.host.equals("maps.horizensearch.com", ignoreCase = true) &&
-        (uri.port == -1 || uri.port == 443) &&
-        uri.userInfo == null
+internal fun isTrustedMapUrl(value: String): Boolean {
+    return try {
+        val uri = URI(value)
+        uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host.equals("maps.horizensearch.com", ignoreCase = true) &&
+            (uri.port == -1 || uri.port == 443) &&
+            uri.rawUserInfo == null
+    } catch (_: Exception) {
+        false
+    }
 }
 
 class MainActivity : Activity() {
@@ -75,11 +81,11 @@ class MainActivity : Activity() {
             override fun shouldOverrideUrlLoading(
                 view: WebView,
                 request: WebResourceRequest
-            ): Boolean = !isTrustedMapUri(request.url)
+            ): Boolean = !isTrustedMapUrl(request.url.toString())
 
             @Suppress("DEPRECATION")
             override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                return !isTrustedMapUri(Uri.parse(url))
+                return !isTrustedMapUrl(url)
             }
 
             override fun onReceivedSslError(
@@ -111,9 +117,7 @@ class MainActivity : Activity() {
                 origin: String?,
                 callback: GeolocationPermissions.Callback?
             ) {
-                val trustedOrigin = origin?.let {
-                    isTrustedMapUri(Uri.parse(it))
-                } == true
+                val trustedOrigin = origin?.let(::isTrustedMapUrl) == true
                 val hasLocationPermission =
                     checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                     checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
