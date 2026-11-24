@@ -21,6 +21,7 @@ import android.view.Surface
 import androidx.car.app.AppManager
 import androidx.car.app.CarAppService
 import androidx.car.app.Screen
+import androidx.car.app.OnRequestPermissionsListener
 import androidx.car.app.Session
 import androidx.car.app.SessionInfo
 import androidx.car.app.SurfaceCallback
@@ -32,6 +33,7 @@ import androidx.car.app.model.Distance
 import androidx.car.app.model.Header
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
+import androidx.car.app.model.ParkedOnlyOnClickListener
 import androidx.car.app.model.Row
 import androidx.car.app.model.SearchTemplate
 import androidx.car.app.model.Template
@@ -132,6 +134,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
     private var selectedRoute: DrivingRoute? = null
     private var currentLocation: Location? = null
     private var stepIndex = 0
+    private var progressIndex = 0
     private var offRouteCount = 0
     private var lastRerouteAt = 0L
     private var rerouting = false
@@ -184,6 +187,39 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
         })
             .setSearchHint("Search for a destination")
             .setShowKeyboardByDefault(true)
+            .setActionStrip(
+                ActionStrip.Builder().addAction(
+                    Action.Builder()
+                        .setTitle("Enable GPS")
+                        .setOnClickListener(
+                            ParkedOnlyOnClickListener.create {
+                                carContext.requestPermissions(
+                                    listOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ),
+                                    object : OnRequestPermissionsListener {
+                                        override fun onRequestPermissionsResult(
+                                            grantedPermissions: List<String>,
+                                            rejectedPermissions: List<String>
+                                        ) {
+                                            if (grantedPermissions.isNotEmpty()) {
+                                                updateLastKnownLocation()
+                                                startLocationUpdates()
+                                                statusMessage = "Location permission granted"
+                                            } else {
+                                                statusMessage = "Location permission was not granted"
+                                            }
+                                            invalidate()
+                                            drawMap()
+                                        }
+                                    }
+                                )
+                            }
+                        )
+                        .build()
+                ).build()
+            )
             .build()
 
     private fun placesTemplate(): Template {
@@ -250,7 +286,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
         val remainingMeters = if (route != null && location != null) {
             NavigationCore.remainingDistanceMeters(
                 route,
-                NavigationCore.nearestRoutePoint(Pair(location.latitude, location.longitude), route)
+                progressIndex
             )
         } else route?.distanceMeters ?: 0.0
         val remainingSeconds = if (route != null && route.distanceMeters > 0.0) {
@@ -371,6 +407,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
     private fun startNavigation(route: DrivingRoute) {
         selectedRoute = route
         stepIndex = if (route.steps.size > 1) 1 else 0
+        progressIndex = 0
         offRouteCount = 0
         rerouting = false
         navigationActive = true
@@ -416,8 +453,9 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
     private fun updateRouteProgress(location: Location) {
         val route = selectedRoute ?: return
         val point = Pair(location.latitude, location.longitude)
-        val nearest = NavigationCore.nearestRoutePoint(point, route)
-        val offRouteDistance = NavigationCore.distanceToRouteMeters(point, route)
+        progressIndex = NavigationCore.nearestRoutePoint(point, route, progressIndex)
+        val nearest = progressIndex
+        val offRouteDistance = NavigationCore.distanceToRouteMeters(point, route, progressIndex)
         if (offRouteDistance > 75.0) {
             offRouteCount++
             if (offRouteCount >= 3) requestReroute(location)
@@ -453,6 +491,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
                     if (replacement != null) {
                         selectedRoute = replacement
                         stepIndex = if (replacement.steps.size > 1) 1 else 0
+                        progressIndex = 0
                         offRouteCount = 0
                         statusMessage = "Route updated"
                         sendTripUpdate()
@@ -481,7 +520,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
         val remaining = if (location != null) {
             NavigationCore.remainingDistanceMeters(
                 route,
-                NavigationCore.nearestRoutePoint(Pair(location.latitude, location.longitude), route)
+                progressIndex
             )
         } else route.distanceMeters
         val seconds = if (route.distanceMeters > 0.0) {
