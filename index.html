@@ -24,7 +24,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 #collapseBtn{padding:5px 9px}
 #navInfo{display:none;position:absolute;z-index:4;top:12px;left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 360px));gap:7px;pointer-events:none}
 .navCard{flex:1;min-width:0;padding:8px 4px;text-align:center}.navLabel{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.6px}.navValue{margin-top:3px;font-size:16px;font-weight:800;white-space:nowrap}
-#nextTurn{display:none;position:absolute;z-index:4;top:85px;left:50%;transform:translateX(-50%);width:min(390px,calc(100vw - 24px));padding:12px;pointer-events:none}
+#nextTurn{display:none;position:absolute;z-index:6;top:12px;left:12px;transform:none;width:min(320px,calc(100vw - 24px));padding:12px;pointer-events:none}
 .turn{display:flex;align-items:center;gap:12px}.turnIcon{width:45px;height:45px;display:grid;place-items:center;border-radius:12px;background:var(--blue);color:#fff;font-size:26px}.turnDistance{font-size:21px;font-weight:800}.turnType{font-size:13px;color:var(--muted);margin-top:2px}.turnRoad{font-size:11px;color:var(--muted);margin-top:7px}
 #speedBox{position:absolute;z-index:4;bottom:16px;left:14px;min-width:92px;padding:8px 12px;text-align:center}#speedValue{font-size:23px;font-weight:800}#speedUnit{font-size:10px;color:var(--muted)}
 #mapControls{position:absolute;z-index:4;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}#mapControls .btn{width:42px;height:40px;padding:0;font-size:17px}
@@ -39,7 +39,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  #searchPanel{top:9px;left:9px;width:calc(100vw - 18px);padding:10px}
  #searchPanel.collapsed .searchFields,#searchPanel.collapsed .quick{display:none}
  #navInfo{top:auto;bottom:70px;width:calc(100vw - 20px)}
- #nextTurn{top:10px}
+ #nextTurn{top:9px;left:9px;width:calc(100vw - 18px);max-width:420px}
  #mapControls{top:auto;right:9px;bottom:70px}
  #mapControls .btn{width:38px;height:36px}
  #bottomBar{left:9px;right:55px;bottom:9px;justify-content:flex-start}
@@ -107,7 +107,7 @@ const S={
  marker:null,target:null,display:null,predictionAt:0,
  route:null,routes:[],routeIndex:0,steps:[],stepIndex:0,coords:[],progress:0,
  origin:null,destination:null,live:false,following:false,headingUp:true,dark:false,
- rerouting:false,lastReroute:0,voice:true,spokenStep:-1,frame:0,history:[],saved:[],
+ rerouting:false,lastReroute:0,offRouteSince:0,voice:true,spokenStep:-1,frame:0,history:[],saved:[],
  searchControllers:{},searchSequence:{},routeLine:null,alternativeLines:[],completedLine:null,
  destinationMarker:null
 };
@@ -188,14 +188,19 @@ function setCar(p){
 function animate(){
  if(S.target){
   if(!S.display)S.display=S.target.slice();
-  const elapsed=Math.max(0,Math.min(2,(performance.now()-S.predictionAt)/1000));
-  const speed=S.speed&&S.speed>1.5&&S.accuracy<40?S.speed:0;
-  const predicted=speed?predictPoint(S.target,S.heading,Math.min(10,speed*elapsed)):S.target;
-  S.display[0]+=(predicted[0]-S.display[0])*.22;
-  S.display[1]+=(predicted[1]-S.display[1])*.22;
+  const elapsed=Math.max(0,Math.min(1.25,(performance.now()-S.predictionAt)/1000));
+  const speed=S.speed&&S.speed>1.5&&S.accuracy<45?Math.min(S.speed,45):0;
+  const predicted=speed?predictPoint(S.target,S.heading,speed*elapsed):S.target;
+  const frameDelta=Math.min(.12,Math.max(.008,(performance.now()-(S.lastFrameAt||performance.now()))/1000));
+  S.lastFrameAt=performance.now();
+  const blend=1-Math.exp(-frameDelta*5.5);
+  S.display[0]+=(predicted[0]-S.display[0])*blend;
+  S.display[1]+=(predicted[1]-S.display[1])*blend;
   setCar(S.display);
   if(S.following){
-   map.panTo(S.display,{animate:false});
+   const zoom=Math.max(map.getZoom(),16);
+   const projected=map.project(S.display,zoom).subtract([0,map.getSize().y*.22]);
+   map.setView(map.unproject(projected,zoom),zoom,{animate:false});
    if(S.headingUp)map.setBearing((360-S.heading)%360);
    else if(Math.abs(map.getBearing())>.1)map.setBearing(0);
   }
@@ -274,9 +279,16 @@ async function resolveOrigin(){
  return S.origin||((await geocode($("origin").value.trim()))[0]);
 }
 async function resolveDestination(){if(S.destination)return S.destination;const r=await geocode($("dest").value.trim());if(!r.length)throw new Error("Destination not found.");return S.destination=r[0]}
-async function getRoutes(a,b){
- const url=ROUTER+"/route/v1/driving/"+a.lon+","+a.lat+";"+b.lon+","+b.lat+"?overview=full&geometries=geojson&steps=true&alternatives=true";
- const r=await fetch(url);if(!r.ok)throw new Error("Routing service unavailable.");const d=await r.json();if(d.code!=="Ok"||!d.routes?.length)throw new Error("No route found.");return d.routes;
+async function getRoutes(a,b,quick=false){
+ const url=ROUTER+"/route/v1/driving/"+a.lon+","+a.lat+";"+b.lon+","+b.lat+"?overview=full&geometries=geojson&steps=true&alternatives="+(quick?"false":"true");
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),quick?7500:15000);
+ try{
+  const r=await fetch(url,{signal:controller.signal});
+  if(!r.ok)throw new Error("Routing service unavailable.");
+  const d=await r.json();if(d.code!=="Ok"||!d.routes?.length)throw new Error("No route found.");
+  return d.routes;
+ }catch(e){if(e.name==="AbortError")throw new Error("Route calculation timed out. Please try again.");throw e}
+ finally{clearTimeout(timer)}
 }
 function stepsFor(route){return (route.legs||[]).flatMap(l=>l.steps||[])}
 function maneuver(s){
@@ -340,16 +352,20 @@ async function navigate(){
   S.routes=await getRoutes(a,b);S.routeIndex=0;S.route=S.routes[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
   S.live=$("origin").value.trim()==="My current location"||!!S.gps;
   if(S.live){startGPS();S.following=true}
+  $("searchPanel").style.display="none";
+  $("directionsCancel").style.display="none";
+  $("directions").style.display="none";
   drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();
   $("navInfo").style.display="flex";$("stopBtn").style.display="inline-block";$("nextTurn").style.display=S.live?"block":"none";
   saveHistory(a,b);status("Route ready · "+S.routes.length+" option"+(S.routes.length===1?"":"s"));
-  if(S.gps){updateProgress();updateNextTurn()}
+  if(S.gps){updateProgress();updateNextTurn();S.following=S.live}
  }catch(e){status(e.message||"Could not create route.",true)}
  finally{$("routeBtn").disabled=false}
 }
 $("routeBtn").onclick=navigate;
 function stopNavigation(){
- S.live=false;S.following=false;S.route=null;S.routes=[];S.steps=[];S.coords=[];S.progress=0;
+ S.live=false;S.following=false;S.route=null;S.routes=[];S.steps=[];S.coords=[];S.progress=0;S.offRouteSince=0;
+ $("searchPanel").style.display="";
  $("navInfo").style.display="none";$("nextTurn").style.display="none";$("stopBtn").style.display="none";
  clearLines();if(S.destinationMarker){map.removeLayer(S.destinationMarker);S.destinationMarker=null}
  if("speechSynthesis"in window)speechSynthesis.cancel();status("Navigation stopped.");
@@ -357,16 +373,24 @@ function stopNavigation(){
 $("stopBtn").onclick=stopNavigation;
 
 function checkOffRoute(){
- if(!S.live||!S.gps||!S.coords.length||S.rerouting)return;
- let nearest=Infinity;for(let i=Math.max(0,S.progress-4);i<Math.min(S.coords.length,S.progress+100);i++)nearest=Math.min(nearest,dist(S.gps,S.coords[i]));
- if(nearest>Math.max(55,S.accuracy*1.5)&&Date.now()-S.lastReroute>12000)reroute();
+ if(!S.live||!S.following||!S.gps||!S.coords.length||S.rerouting||S.accuracy>80)return;
+ let nearest=Infinity;
+ const start=Math.max(0,S.progress-8),end=Math.min(S.coords.length,S.progress+180);
+ for(let i=start;i<end;i++)nearest=Math.min(nearest,dist(S.gps,S.coords[i]));
+ const threshold=Math.max(38,S.accuracy*1.15);
+ if(nearest>threshold){
+  if(!S.offRouteSince)S.offRouteSince=Date.now();
+  if(Date.now()-S.offRouteSince>2200&&Date.now()-S.lastReroute>5000)reroute();
+ }else S.offRouteSince=0;
 }
 async function reroute(){
- if(!S.gps||!S.destination||S.rerouting)return;S.rerouting=true;S.lastReroute=Date.now();status("Off route · finding a new route...");
+ if(!S.gps||!S.destination||S.rerouting)return;
+ S.rerouting=true;S.lastReroute=Date.now();S.offRouteSince=0;status("Off route · quickly recalculating...");
  try{
-  S.routes=await getRoutes({lat:S.gps[0],lon:S.gps[1]},S.destination);S.routeIndex=0;S.route=S.routes[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
-  drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();status("New route found.");
- }catch(e){status("Could not recalculate route.",true)}finally{S.rerouting=false}
+  const fresh=await getRoutes({lat:S.gps[0],lon:S.gps[1]},S.destination,true);
+  S.routes=fresh;S.routeIndex=0;S.route=fresh[0];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
+  drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();status("Route updated.");
+ }catch(e){status(e.message||"Could not recalculate route.",true)}finally{S.rerouting=false}
 }
 
 function loadStored(){
