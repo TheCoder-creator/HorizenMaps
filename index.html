@@ -65,7 +65,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
   <div id="status">Enter a destination to get started.</div>
  </div>
  <div class="quick"><button class="btn" id="saveBtn">☆ Save</button><button class="btn" id="savedBtn">★ Saved</button><button class="btn" id="historyBtn">◷ History</button></div>
- <div id="routeChoices"></div>
+ 
 </section>
 
 <div id="navInfo">
@@ -84,6 +84,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  <button class="btn" id="zoomOutBtn" title="Zoom out">−</button>
 </div>
 <div id="bottomBar">
+ <button class="btn" id="routesBtn">↗ Routes</button>
  <button class="btn" id="directionsBtn">☷ Directions</button>
  <button class="btn" id="nearbyBtn">⌕ Nearby</button>
  <button class="btn" id="voiceBtn">🔊 Voice on</button>
@@ -91,6 +92,7 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  <button class="btn danger" id="stopBtn" style="display:none">■ Stop</button>
 </div>
 
+<div id="routeOptions" class="sheet"><div class="sheetHead"><strong>Choose a route</strong><button class="btn" data-close="routeOptions">✕</button></div><div id="routeChoices"></div></div>
 <div id="directions" class="sheet"><div class="sheetHead"><strong>Turn-by-turn directions</strong><button class="btn" data-close="directions">✕</button></div><div id="directionsContent" class="muted">Plan a route to see directions.</div></div>
 <div id="places" class="sheet"><div class="sheetHead"><strong>Places</strong><button class="btn" data-close="places">✕</button></div><div id="placesContent" class="muted">Nearby places will appear here.</div></div>
 <div id="history" class="sheet"><div class="sheetHead"><strong>Route history</strong><button class="btn" data-close="history">✕</button></div><div id="historyContent"></div></div>
@@ -221,7 +223,7 @@ function gpsUpdate(pos){
  }
  S.lastFix=p;S.lastFixAt=now;S.predictionAt=performance.now();S.gps=p;S.target=p;
  $("origin").value="My current location";S.origin={lat:p[0],lon:p[1],label:"Your location"};
- $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);\n if(now-S.lastLimitQuery>10000)updateSpeedLimit(p);
+ $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);\n if(Date.now()-S.lastLimitQuery>10000)updateSpeedLimit(p);
  if(S.live){updateProgress();updateNavInfo();updateNextTurn();checkOffRoute()}
 }
 function startGPS(){
@@ -482,6 +484,7 @@ function closeDirections(){
  $("searchPanel").style.display="";
  $("directionsCancel").style.display="none";
 }
+$("routesBtn").onclick=()=>{$("routeOptions").style.display="block";renderRouteChoices()};
 $("directionsBtn").onclick=()=>{
  if($("directions").style.display==="block"){closeDirections();return}
  $("searchPanel").style.display="none";
