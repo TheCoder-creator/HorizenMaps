@@ -14,6 +14,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Surface
 import androidx.car.app.AppManager
 import androidx.car.app.CarAppService
@@ -39,6 +40,9 @@ import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sinh
 import kotlin.math.tan
+
+private const val TAG = "HorizonMapsCar"
+private const val TILE_RETRY_MS = 20_000L
 
 class HorizonCarAppService : CarAppService() {
     override fun createHostValidator(): HostValidator {
@@ -67,6 +71,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
     }
     private val tileCache = ConcurrentHashMap<String, Bitmap>()
     private val loadingTiles = ConcurrentHashMap.newKeySet<String>()
+    private val failedTiles = ConcurrentHashMap<String, Long>()
     private val tilePaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val backgroundPaint = Paint().apply { color = Color.rgb(24, 29, 36) }
     private val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -78,7 +83,19 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
         style = Paint.Style.STROKE
         strokeWidth = 5f
     }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 27f
+        setShadowLayer(4f, 1f, 1f, Color.BLACK)
+    }
+    private val smallTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 20f
+        setShadowLayer(4f, 1f, 1f, Color.BLACK)
+    }
     private val markerPath = Path()
+    private var tileError: String? = null
+    private var renderError: String? = null
     private val locationManager = carContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private val locationListener = LocationListener { location ->
         centerLat = location.latitude
@@ -121,7 +138,8 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
                 centerLat = location.latitude
                 centerLon = location.longitude
             }
-        } catch (_: SecurityException) {
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Location permission is unavailable", e)
         }
     }
 
@@ -135,8 +153,10 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
                 locationListener,
                 Looper.getMainLooper()
             )
-        } catch (_: SecurityException) {
-        } catch (_: IllegalArgumentException) {
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Location updates are not permitted", e)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "GPS provider is unavailable", e)
         }
     }
 
@@ -148,6 +168,8 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
         mapSurface = nextSurface
         surfaceWidth = surfaceContainer.width
         surfaceHeight = surfaceContainer.height
+        renderError = null
+        Log.i(TAG, "Map surface available: ${surfaceWidth}x${surfaceHeight}")
         drawMap()
     }
 
@@ -192,13 +214,14 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
         var canvas: Canvas? = null
         try {
             canvas = surface.lockCanvas(null) ?: return
-            canvas.drawRect(0f, 0f, surfaceWidth.toFloat(), surfaceHeight.toFloat(), backgroundPaint)
+            canvas.drawColor(Color.rgb(24, 29, 36))
             val center = project(centerLat, centerLon)
             val left = floor((center.first - surfaceWidth / 2.0) / 256.0).toInt()
             val right = floor((center.first + surfaceWidth / 2.0) / 256.0).toInt()
             val top = floor((center.second - surfaceHeight / 2.0) / 256.0).toInt()
             val bottom = floor((center.second + surfaceHeight / 2.0) / 256.0).toInt()
             val tileCount = 2.0.pow(zoom).toInt()
+            var visibleTiles = 0
 
             for (tileY in top..bottom) {
                 if (tileY !in 0 until tileCount) continue
@@ -211,6 +234,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
                     val bitmap = tileCache[key]
                     if (bitmap != null && !bitmap.isRecycled) {
                         canvas.drawBitmap(bitmap, null, destination, tilePaint)
+                        visibleTiles++
                     } else {
                         canvas.drawRect(destination, backgroundPaint)
                         loadTile(key)
@@ -228,41 +252,81 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) : Screen(carCont
             markerPath.close()
             canvas.drawPath(markerPath, markerPaint)
             canvas.drawPath(markerPath, markerBorder)
-        } catch (_: Exception) {
+
+            if (visibleTiles == 0) {
+                val message = tileError ?: "Loading map tiles…"
+                val messageWidth = textPaint.measureText(message)
+                canvas.drawText(message, (surfaceWidth - messageWidth) / 2f, cy + 58f, textPaint)
+            } else if (tileError != null) {
+                canvas.drawText("Some map tiles could not load", 24f, surfaceHeight - 52f, smallTextPaint)
+            }
+
+            if (renderError != null) {
+                canvas.drawText("Map drawing error", 24f, 42f, textPaint)
+            }
+
+            canvas.drawText("© OpenStreetMap contributors", 20f, surfaceHeight - 18f, smallTextPaint)
+        } catch (e: Exception) {
+            renderError = e.javaClass.simpleName + ": " + (e.message ?: "unknown")
+            Log.e(TAG, "Could not draw map surface", e)
         } finally {
             if (canvas != null) {
                 try {
                     surface.unlockCanvasAndPost(canvas)
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.e(TAG, "Could not post map canvas", e)
                 }
             }
         }
     }
 
     private fun loadTile(key: String) {
+        val now = System.currentTimeMillis()
+        val failedAt = failedTiles[key]
+        if (failedAt != null && now - failedAt < TILE_RETRY_MS) return
         if (!loadingTiles.add(key)) return
+
         tileExecutor.execute {
             var bitmap: Bitmap? = null
+            var failure: String? = null
             var connection: HttpURLConnection? = null
             try {
                 val parts = key.split("/")
                 val url = URL("https://tile.openstreetmap.org/${parts[0]}/${parts[1]}/${parts[2]}.png")
                 connection = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 6000
-                    readTimeout = 6000
-                    setRequestProperty("User-Agent", "HorizonMaps/1.0 (Android Auto map)")
+                    connectTimeout = 10_000
+                    readTimeout = 10_000
+                    useCaches = true
+                    instanceFollowRedirects = true
+                    setRequestProperty(
+                        "User-Agent",
+                        "HorizenMaps/1.0 (+https://maps.horizensearch.com/)"
+                    )
+                    setRequestProperty("Accept", "image/png")
+                }
+                val response = connection.responseCode
+                if (response != HttpURLConnection.HTTP_OK) {
+                    failure = "Map tile server returned HTTP $response"
+                    throw IllegalStateException(failure)
                 }
                 connection.inputStream.use { bitmap = BitmapFactory.decodeStream(it) }
-                if (bitmap != null) {
-                    if (tileCache.size > 80) tileCache.clear()
-                    tileCache[key] = bitmap!!
+                if (bitmap == null) {
+                    failure = "Map tile response was not a readable image"
+                    throw IllegalStateException(failure)
                 }
-            } catch (_: Exception) {
+                tileCache[key] = bitmap!!
+                failedTiles.remove(key)
+                tileError = null
+            } catch (e: Exception) {
+                failure = failure ?: "Map tiles unavailable: ${e.javaClass.simpleName}"
+                tileError = failure
+                failedTiles[key] = System.currentTimeMillis()
+                Log.w(TAG, "Tile request failed for $key: $failure", e)
             } finally {
                 connection?.disconnect()
                 loadingTiles.remove(key)
             }
-            if (bitmap != null) mainHandler.post { drawMap() }
+            mainHandler.post { drawMap() }
         }
     }
 }
