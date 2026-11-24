@@ -151,7 +151,7 @@ class HorizonCarScreen(carContext: androidx.car.app.CarContext) :
     fun handleNavigationIntent(intent: Intent?) {
         val data = intent?.data ?: return
         if (intent.action != Intent.ACTION_VIEW &&
-            intent.action != Intent.ACTION_NAVIGATE &&
+            intent.action != "android.intent.action.NAVIGATE" &&
             intent.action != "androidx.car.app.action.NAVIGATE"
         ) return
 
