@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://*.openstreetmap.org https://cdnjs.cloudflare.com; font-src 'self' data:; connect-src 'self' https://tile.openstreetmap.org https://*.openstreetmap.org https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de; object-src 'none'; base-uri 'self'; form-action 'self'">
-<meta http-equiv="Permissions-Policy" content="geolocation=(self), camera=(), microphone=()">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://*.openstreetmap.org https://cdnjs.cloudflare.com; font-src 'self' data:; connect-src 'self' https://tile.openstreetmap.org https://*.openstreetmap.org https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>HorizonMaps</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
-<link rel="stylesheet" href="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet-rotate@0.6.2/dist/leaflet-rotate.css'">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
 :root{--bg:#fff;--panel:#fff;--text:#17191d;--muted:#68717d;--border:#e1e5eb;--blue:#2878f0;--shadow:0 5px 24px #0002}
 *{box-sizing:border-box}html,body,#map{height:100%;width:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;color:var(--text)}body{overflow:hidden}#map{position:absolute;inset:0;z-index:0;background:#e9eef3}
@@ -24,17 +22,18 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 #collapseBtn{padding:5px 9px}
 #navInfo{display:none;position:absolute;z-index:4;top:12px;left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 360px));gap:7px;pointer-events:none}
 .navCard{flex:1;min-width:0;padding:8px 4px;text-align:center}.navLabel{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.6px}.navValue{margin-top:3px;font-size:16px;font-weight:800;white-space:nowrap}
-#nextTurn{display:none;position:absolute;z-index:6;top:12px;left:12px;transform:none;width:min(320px,calc(100vw - 24px));padding:12px;pointer-events:none}
+#nextTurn{display:none;position:absolute;z-index:6;top:12px;left:12px;width:min(320px,calc(100vw - 24px));padding:12px;pointer-events:none}
 .turn{display:flex;align-items:center;gap:12px}.turnIcon{width:45px;height:45px;display:grid;place-items:center;border-radius:12px;background:var(--blue);color:#fff;font-size:26px}.turnDistance{font-size:21px;font-weight:800}.turnType{font-size:13px;color:var(--muted);margin-top:2px}.turnRoad{font-size:11px;color:var(--muted);margin-top:7px}
 #speedBox,#limitBox{position:absolute;z-index:4;bottom:16px;min-width:92px;padding:8px 12px;text-align:center}#speedBox{left:14px}#limitBox{left:120px}#speedValue,#limitValue{font-size:23px;font-weight:800}#speedUnit,#limitUnit{font-size:10px;color:var(--muted)}
 #mapControls{position:absolute;z-index:4;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}#mapControls .btn{width:42px;height:40px;padding:0;font-size:17px}
 #bottomBar{position:absolute;z-index:4;right:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 130px)}#bottomBar .btn{box-shadow:var(--shadow)}
 .sheet{display:none;position:absolute;z-index:8;right:12px;top:12px;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;padding:13px}
 .sheetHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.sheetHead strong{font-size:15px}
-.step,.placeItem,.historyItem{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.4}.stepIcon{width:25px;text-align:center;font-size:18px}.muted{color:var(--muted)}
+.step,.placeItem,.historyItem{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.4;align-items:center;justify-content:space-between}.stepIcon{width:25px;text-align:center;font-size:18px}.muted{color:var(--muted)}
+.step{justify-content:flex-start;align-items:flex-start}
 .routeChoice{margin-top:7px;padding:9px;border:1px solid var(--border);border-radius:9px;font-size:12px;cursor:pointer}.routeChoice.selected{border-color:var(--blue);background:#eff6ff}
 .carMarker{width:34px;height:44px;position:relative;filter:drop-shadow(0 2px 3px #0007)}.carRotate{position:absolute;inset:0;transform-origin:50% 50%}
-.leaflet-marker-icon{background:transparent;border:0}.leaflet-tile-pane.dark-tiles .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.88) contrast(.9)}.carBody{position:absolute;left:6px;top:9px;width:22px;height:29px;border:2px solid white;border-radius:8px 8px 6px 6px;background:#2878f0}.carGlass{position:absolute;left:11px;top:13px;width:12px;height:8px;background:#bfe2ff;border-radius:4px 4px 2px 2px}.carNose{position:absolute;top:0;left:13px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #2878f0}.carLight{position:absolute;left:8px;top:33px;width:4px;height:3px;background:white;box-shadow:14px 0 white}
+.leaflet-marker-icon.carMarker{background:transparent;border:0}.leaflet-tile-pane.dark-tiles .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.88) contrast(.9)}.carBody{position:absolute;left:6px;top:9px;width:22px;height:29px;border:2px solid white;border-radius:8px 8px 6px 6px;background:#2878f0}.carGlass{position:absolute;left:11px;top:13px;width:12px;height:8px;background:#bfe2ff;border-radius:4px 4px 2px 2px}.carNose{position:absolute;top:0;left:13px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #2878f0}.carLight{position:absolute;left:8px;top:33px;width:4px;height:3px;background:white;box-shadow:14px 0 white}
 @media(max-width:700px){
  #searchPanel{top:9px;left:9px;width:calc(100vw - 18px);padding:10px}
  #searchPanel.collapsed .searchFields,#searchPanel.collapsed .quick{display:none}
@@ -46,7 +45,6 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  #bottomBar .btn{padding:8px}
  #speedBox{bottom:135px;left:9px} #limitBox{bottom:135px;left:112px}
  #directions,#places,#history,#routeOptions{top:9px;right:9px;max-height:calc(100vh - 18px)}
- #directionsCancel{top:9px;left:9px}
 }
 </style>
 </head>
@@ -65,7 +63,6 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
   <div id="status">Enter a destination to get started.</div>
  </div>
  <div class="quick"><button class="btn" id="saveBtn">☆ Save</button><button class="btn" id="savedBtn">★ Saved</button><button class="btn" id="historyBtn">◷ History</button></div>
- 
 </section>
 
 <div id="navInfo">
@@ -74,12 +71,13 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
  <div class="navCard card"><div class="navLabel">Distance</div><div class="navValue" id="distanceValue">--</div></div>
 </div>
 <div id="nextTurn" class="card"><div class="turn"><div class="turnIcon" id="turnIcon">↑</div><div><div class="turnDistance" id="turnDistance">--</div><div class="turnType" id="turnType">Continue straight</div></div></div><div class="turnRoad" id="turnRoad"></div></div>
-<div id="speedBox" class="card"><div id="speedValue">--</div><div id="speedUnit">mph · GPS speed</div></div>\n<div id="limitBox" class="card"><div id="limitValue">--</div><div id="limitUnit">mph · speed limit</div></div>
+<div id="speedBox" class="card"><div id="speedValue">--</div><div id="speedUnit">mph · GPS speed</div></div>
+<div id="limitBox" class="card"><div id="limitValue">--</div><div id="limitUnit">mph · speed limit</div></div>
 
 <div id="mapControls">
  <button class="btn" id="recenterBtn" title="Recenter">◎</button>
- <button class="btn" id="compassBtn" title="Toggle heading-up">🧭</button>
-  <button class="btn" id="themeBtn" title="Toggle map theme">☾</button>
+ <button class="btn active" id="compassBtn" title="Toggle heading-up">🧭</button>
+ <button class="btn" id="themeBtn" title="Toggle map theme">☾</button>
  <button class="btn" id="zoomInBtn" title="Zoom in">＋</button>
  <button class="btn" id="zoomOutBtn" title="Zoom out">−</button>
 </div>
@@ -97,8 +95,8 @@ input{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-
 <div id="places" class="sheet"><div class="sheetHead"><strong>Places</strong><button class="btn" data-close="places">✕</button></div><div id="placesContent" class="muted">Nearby places will appear here.</div></div>
 <div id="history" class="sheet"><div class="sheetHead"><strong>Route history</strong><button class="btn" data-close="history">✕</button></div><div id="historyContent"></div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'"></script>
-<script src="https://unpkg.com/leaflet-rotate@0.6.2/dist/leaflet-rotate.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet-rotate@0.6.2/dist/leaflet-rotate.js'"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const ROUTER="https://router.project-osrm.org";
@@ -111,36 +109,42 @@ const S={
  origin:null,destination:null,live:false,following:false,headingUp:true,dark:false,
  rerouting:false,lastReroute:0,offRouteSince:0,voice:true,spokenStep:-1,frame:0,history:[],saved:[],routeMode:"fastest",lastLimitQuery:0,limitController:null,
  searchControllers:{},searchSequence:{},routeLine:null,alternativeLines:[],completedLine:null,
- destinationMarker:null
+ destinationMarker:null,lastFrameAt:0,tileErrorShown:false
 };
 
-window.addEventListener("error",event=>{const box=document.getElementById("status");if(box){box.textContent="Map error: "+(event.message||"A map component failed to load.");box.className="error"}});
-if(!window.L){const box=document.getElementById("status");if(box){box.textContent="Map library failed to load. Check the connection and reload.";box.className="error"}throw new Error("Leaflet did not load")}
+if(typeof L==="undefined"){
+ document.getElementById("status").textContent="Map library failed to load. Check your connection.";
+ throw new Error("Leaflet not loaded");
+}
+
 const map=L.map("map",{
   rotate:true,
   bearing:0,
   zoomControl:false,
-  attributionControl:true,
-  preferCanvas:true
+  attributionControl:true
 }).setView([37.3382,-121.8863],12);
 
-const streetLayer=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+// Rotation is optional: if the plugin fails to load, the map still works.
+const canRotate=typeof map.setBearing==="function";
+const setBear=b=>{if(canRotate)map.setBearing(b)};
+const getBear=()=>canRotate?map.getBearing():0;
+if(!canRotate){S.headingUp=false;$("compassBtn").classList.remove("active")}
+
+const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
   maxZoom:19,
+  subdomains:"abc",
   attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 });
 streetLayer.addTo(map);
-map.whenReady(()=>setTimeout(()=>map.invalidateSize({pan:false}),80));
-window.addEventListener("resize",()=>map.invalidateSize({pan:false}));
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>map.invalidateSize({pan:false}),120)});
-setTimeout(()=>map.invalidateSize({pan:false}),500);
-setTimeout(()=>map.invalidateSize({pan:false}),1500);
 streetLayer.on("tileerror",()=>{
  if(!S.tileErrorShown){S.tileErrorShown=true;status("Map tiles are not loading. Check the connection or map security settings.",true)}
 });
 streetLayer.on("tileload",()=>{
- S.tileErrorShown=false;
- if($("status").textContent.startsWith("Map tiles are not loading"))status("Map loaded.");
+ if(S.tileErrorShown){S.tileErrorShown=false;if($("status").textContent.startsWith("Map tiles are not loading"))status("Map loaded.")}
 });
+// Make sure Leaflet measures the container correctly (important inside iframes)
+setTimeout(()=>map.invalidateSize(),100);
+window.addEventListener("resize",()=>map.invalidateSize());
 
 function status(t,error=false){$("status").textContent=t;$("status").className=error?"error":""}
 const rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI;
@@ -183,7 +187,7 @@ function drawRoutes(){
  if(S.destinationMarker)map.removeLayer(S.destinationMarker);
  S.destinationMarker=L.marker([S.destination.lat,S.destination.lon]).addTo(map).bindPopup("Destination");
  const bounds=L.latLngBounds(S.coords.map(routePoint));
- map.fitBounds(bounds,{paddingTopLeft:[340,150],paddingBottomRight:[80,110],maxZoom:16});
+ map.fitBounds(bounds,{paddingTopLeft:[40,150],paddingBottomRight:[40,110],maxZoom:16});
  if(S.following&&S.gps)map.setView(S.gps,17);
  updateProgress();
 }
@@ -198,29 +202,32 @@ function setCar(p){
  if(!S.marker)S.marker=L.marker(p,{icon:makeCarIcon(),interactive:false,zIndexOffset:1000}).addTo(map);
  else S.marker.setLatLng(p);
  const el=S.marker.getElement();
- const rotator=el?.querySelector(".carRotate");
+ const rotator=el&&el.querySelector(".carRotate");
  if(rotator)rotator.style.transform="rotate("+S.heading+"deg)";
 }
 function animate(){
- if(S.target){
-  if(!S.display)S.display=S.target.slice();
-  const elapsed=Math.max(0,Math.min(1.25,(performance.now()-S.predictionAt)/1000));
-  const speed=S.speed&&S.speed>1.5&&S.accuracy<45?Math.min(S.speed,45):0;
-  const predicted=speed?predictPoint(S.target,S.heading,speed*elapsed):S.target;
-  const frameDelta=Math.min(.12,Math.max(.008,(performance.now()-(S.lastFrameAt||performance.now()))/1000));
-  S.lastFrameAt=performance.now();
-  const blend=1-Math.exp(-frameDelta*5.5);
-  S.display[0]+=(predicted[0]-S.display[0])*blend;
-  S.display[1]+=(predicted[1]-S.display[1])*blend;
-  setCar(S.display);
-  if(S.following){
-   const zoom=Math.max(map.getZoom(),16);
-   const projected=map.project(S.display,zoom).subtract([0,map.getSize().y*.22]);
-   map.setView(map.unproject(projected,zoom),zoom,{animate:false});
-   if(S.headingUp)map.setBearing((360-S.heading)%360);
-   else if(Math.abs(map.getBearing())>.1)map.setBearing(0);
+ try{
+  if(S.target){
+   if(!S.display)S.display=S.target.slice();
+   const now=performance.now();
+   const elapsed=Math.max(0,Math.min(1.25,(now-S.predictionAt)/1000));
+   const speed=S.speed&&S.speed>1.5&&S.accuracy<45?Math.min(S.speed,45):0;
+   const predicted=speed?predictPoint(S.target,S.heading,speed*elapsed):S.target;
+   const frameDelta=Math.min(.12,Math.max(.008,(now-(S.lastFrameAt||now))/1000));
+   S.lastFrameAt=now;
+   const blend=1-Math.exp(-frameDelta*5.5);
+   S.display[0]+=(predicted[0]-S.display[0])*blend;
+   S.display[1]+=(predicted[1]-S.display[1])*blend;
+   setCar(S.display);
+   if(S.following){
+    const zoom=Math.max(map.getZoom(),16);
+    const projected=map.project(S.display,zoom).subtract([0,map.getSize().y*.22]);
+    map.setView(map.unproject(projected,zoom),zoom,{animate:false});
+    if(S.headingUp)setBear((360-S.heading)%360);
+    else if(Math.abs(getBear())>.1)setBear(0);
+   }
   }
- }
+ }catch(e){console.error(e)}
  S.frame=requestAnimationFrame(animate);
 }
 S.frame=requestAnimationFrame(animate);
@@ -236,24 +243,28 @@ function gpsUpdate(pos){
   if(measured<60)S.speed=S.speed===null?measured:S.speed*.65+measured*.35;
  }
  S.lastFix=p;S.lastFixAt=now;S.predictionAt=performance.now();S.gps=p;S.target=p;
- $("origin").value="My current location";S.origin={lat:p[0],lon:p[1],label:"Your location"};
- $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);\n if(Date.now()-S.lastLimitQuery>10000)updateSpeedLimit(p);
+ if(!S.origin||$("origin").value.trim()===""||$("origin").value==="My current location"){
+  $("origin").value="My current location";S.origin={lat:p[0],lon:p[1],label:"Your location"};
+ }
+ $("speedValue").textContent=S.speed===null?"--":Math.round(S.speed*2.236936);
+ if(Date.now()-S.lastLimitQuery>10000)updateSpeedLimit(p);
  if(S.live){updateProgress();updateNavInfo();updateNextTurn();checkOffRoute()}
 }
 function startGPS(){
  if(!navigator.geolocation){status("This browser does not support location.",true);return}
  if(S.watch!==null)return;
  status("Waiting for GPS location...");
- S.watch=navigator.geolocation.watchPosition(gpsUpdate,e=>status(e.code===1?"Location permission denied.":"Could not get GPS location.",true),{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+ S.watch=navigator.geolocation.watchPosition(gpsUpdate,e=>{status(e.code===1?"Location permission denied.":"Could not get GPS location.",true);S.watch=null},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
 }
 function waitGPS(){return new Promise((resolve,reject)=>{const t=Date.now();const check=()=>S.gps?resolve():Date.now()-t>16000?reject(new Error("Could not get GPS location.")):setTimeout(check,200);check()})}
-$("gpsBtn").onclick=()=>{startGPS();S.following=true};
-$("recenterBtn").onclick=()=>{if(!S.gps){startGPS();return}S.following=true;map.setView(S.gps,17);if(S.headingUp)map.setBearing((360-S.heading)%360)};
+$("gpsBtn").onclick=()=>{startGPS();S.following=true;if(S.gps)map.setView(S.gps,16)};
+$("recenterBtn").onclick=()=>{if(!S.gps){startGPS();return}S.following=true;map.setView(S.gps,17);if(S.headingUp)setBear((360-S.heading)%360)};
 $("compassBtn").onclick=()=>{
+ if(!canRotate){status("Map rotation is unavailable (plugin did not load).",true);return}
  S.headingUp=!S.headingUp;
  $("compassBtn").classList.toggle("active",S.headingUp);
- if(!S.headingUp)map.setBearing(0);
- else if(S.gps)map.setBearing((360-S.heading)%360);
+ if(!S.headingUp)setBear(0);
+ else if(S.gps)setBear((360-S.heading)%360);
 };
 $("themeBtn").onclick=()=>{
  S.dark=!S.dark;
@@ -272,7 +283,7 @@ async function geocode(q,signal){
 function setupAutocomplete(inputId,boxId,kind){
  const input=$(inputId),box=$(boxId);let timer;
  input.addEventListener("input",()=>{
-  clearTimeout(timer);S.searchControllers[kind]?.abort();
+  clearTimeout(timer);if(S.searchControllers[kind])S.searchControllers[kind].abort();
   const q=input.value.trim();if(kind==="origin")S.origin=null;else S.destination=null;
   if(q.length<3){box.classList.remove("show");return}
   const seq=S.searchSequence[kind]=(S.searchSequence[kind]||0)+1;
@@ -291,8 +302,10 @@ function setupAutocomplete(inputId,boxId,kind){
 setupAutocomplete("origin","originSuggest","origin");setupAutocomplete("dest","destSuggest","destination");
 document.addEventListener("click",e=>{if(!e.target.closest("#origin,#originSuggest"))$("originSuggest").classList.remove("show");if(!e.target.closest("#dest,#destSuggest"))$("destSuggest").classList.remove("show")});
 async function resolveOrigin(){
- if($("origin").value.trim()==="My current location"||!$("origin").value.trim()){startGPS();if(!S.gps)await waitGPS();return {lat:S.gps[0],lon:S.gps[1],label:"Your location"}}
- return S.origin||((await geocode($("origin").value.trim()))[0]);
+ const v=$("origin").value.trim();
+ if(v==="My current location"||!v){startGPS();if(!S.gps)await waitGPS();return {lat:S.gps[0],lon:S.gps[1],label:"Your location"}}
+ if(S.origin&&S.origin.label!=="Your location")return S.origin;
+ const r=await geocode(v);if(!r.length)throw new Error("Starting point not found.");return r[0];
 }
 async function resolveDestination(){if(S.destination)return S.destination;const r=await geocode($("dest").value.trim());if(!r.length)throw new Error("Destination not found.");return S.destination=r[0]}
 async function getRoutes(a,b,quick=false){
@@ -301,15 +314,15 @@ async function getRoutes(a,b,quick=false){
  try{
   const r=await fetch(url,{signal:controller.signal});
   if(!r.ok)throw new Error("Routing service unavailable.");
-  const d=await r.json();if(d.code!=="Ok"||!d.routes?.length)throw new Error("No route found.");
+  const d=await r.json();if(d.code!=="Ok"||!d.routes||!d.routes.length)throw new Error("No route found.");
   return d.routes;
  }catch(e){if(e.name==="AbortError")throw new Error("Route calculation timed out. Please try again.");throw e}
  finally{clearTimeout(timer)}
 }
 async function updateSpeedLimit(position){
- if(!position||!S.live)return;
+ if(!position)return;
  S.lastLimitQuery=Date.now();
- S.limitController?.abort();
+ if(S.limitController)S.limitController.abort();
  const controller=new AbortController();S.limitController=controller;
  const timer=setTimeout(()=>controller.abort(),7000);
  try{
@@ -319,9 +332,9 @@ async function updateSpeedLimit(position){
   const data=await response.json();
   let best=null,bestDistance=Infinity;
   for(const way of data.elements||[]){
-   const raw=way.tags?.maxspeed;if(!raw||!Array.isArray(way.geometry))continue;
+   const raw=way.tags&&way.tags.maxspeed;if(!raw||!Array.isArray(way.geometry))continue;
    const value=String(raw).split(";")[0].trim().toLowerCase();
-   const match=value.match(/^(\\d+(?:\\.\\d+)?)\\s*(mph|km\\/?h|kph)?$/);
+   const match=value.match(/^(\d+(?:\.\d+)?)\s*(mph|km\/?h|kph)?$/);
    if(!match)continue;
    let mph=Number(match[1]);if(!match[2]||match[2].startsWith("km")||match[2]==="kph")mph*=0.621371;
    if(!Number.isFinite(mph)||mph<=0||mph>150)continue;
@@ -331,8 +344,9 @@ async function updateSpeedLimit(position){
    }
   }
   if(!controller.signal.aborted){
-   $("limitValue").textContent=best!==null&&bestDistance<=45?best:"--";
-   $("limitUnit").textContent=best!==null&&bestDistance<=45?"mph · OSM speed limit":"mph · limit unavailable";
+   const ok=best!==null&&bestDistance<=45;
+   $("limitValue").textContent=ok?best:"--";
+   $("limitUnit").textContent=ok?"mph · OSM speed limit":"mph · limit unavailable";
   }
  }catch(e){
   if(e.name!=="AbortError"){$("limitValue").textContent="--";$("limitUnit").textContent="mph · limit unavailable"}
@@ -340,11 +354,11 @@ async function updateSpeedLimit(position){
 }
 function stepsFor(route){return (route.legs||[]).flatMap(l=>l.steps||[])}
 function maneuver(s){
- const m=s?.maneuver||{},t=m.type||"",d=m.modifier||"";
+ const m=(s&&s.maneuver)||{},t=m.type||"",d=m.modifier||"";
  if(t==="arrive")return ["●","You have arrived"];
  if(t==="depart")return ["↑","Start driving"];
- if(t==="uturn")return ["⟲","Make a U-turn"];
- if(t==="roundabout")return ["⟳","Take the roundabout"];
+ if(t==="uturn"||d==="uturn")return ["⟲","Make a U-turn"];
+ if(t==="roundabout"||t==="rotary")return ["⟳","Take the roundabout"];
  if(d.includes("left"))return ["↰",t==="merge"?"Merge left":"Turn left"];
  if(d.includes("right"))return ["↱",t==="merge"?"Merge right":"Turn right"];
  if(t==="merge")return ["↑","Merge"];
@@ -353,19 +367,19 @@ function maneuver(s){
  if(t==="off ramp")return ["↗","Take the exit"];
  return ["↑","Continue straight"];
 }
+function turnCount(route){
+ return stepsFor(route).filter(s=>{
+  const t=(s.maneuver&&s.maneuver.type)||"",m=(s.maneuver&&s.maneuver.modifier)||"";
+  return !["depart","arrive","continue","new name"].includes(t)&&
+   (["turn","uturn","roundabout","rotary","fork","merge","on ramp","off ramp","exit roundabout"].includes(t)||m!=="straight");
+ }).length;
+}
 function routeRank(mode){
  const indexes=S.routes.map((r,i)=>({r,i}));
  if(mode==="shortest")indexes.sort((a,b)=>a.r.distance-b.r.distance);
  else if(mode==="fewest")indexes.sort((a,b)=>turnCount(a.r)-turnCount(b.r)||a.r.duration-b.r.duration);
  else indexes.sort((a,b)=>a.r.duration-b.r.duration);
- return indexes[0]?.i??0;
-}
-function turnCount(route){
- return stepsFor(route).filter(s=>{
-  const t=s.maneuver?.type||"",m=s.maneuver?.modifier||"";
-  return !["depart","arrive","continue","new name"].includes(t)&&
-   (["turn","uturn","roundabout","rotary","fork","merge","on ramp","off ramp","exit roundabout"].includes(t)||m!=="straight");
- }).length;
+ return indexes.length?indexes[0].i:0;
 }
 function selectRouteMode(mode){
  S.routeMode=mode;S.routeIndex=routeRank(mode);S.route=S.routes[S.routeIndex];
@@ -374,26 +388,30 @@ function selectRouteMode(mode){
 }
 function renderRouteChoices(){
  const box=$("routeChoices");box.innerHTML="";
- if(!S.routes.length)return;
+ if(!S.routes.length){box.textContent="Plan a route first.";box.className="muted";return}
+ box.className="";
  const modes=[["fastest","Fastest"],["shortest","Shortest"],["fewest","Fewer turns"]];
  modes.forEach(([mode,label])=>{
   const i=routeRank(mode),r=S.routes[i],el=document.createElement("div");
   el.className="routeChoice"+(mode===S.routeMode?" selected":"");
   const metric=mode==="fewest"?turnCount(r)+" turns":mode==="shortest"?distText(r.distance):timeText(r.duration);
   const detail=mode==="fewest"?timeText(r.duration):mode==="shortest"?timeText(r.duration):distText(r.distance);
-  el.innerHTML="<b>"+label+(S.routes.length===1?" · only route available":"")+"</b><div>"+metric+" · "+detail+"</div>";
+  const b=document.createElement("b");b.textContent=label+(S.routes.length===1?" · only route available":"");
+  const d=document.createElement("div");d.textContent=metric+" · "+detail;
+  el.append(b,d);
   el.onclick=()=>selectRouteMode(mode);
   box.appendChild(el);
  });
 }
 function renderDirections(){
  const box=$("directionsContent");box.innerHTML="";
+ if(!S.steps.length){box.textContent="Plan a route to see directions.";return}
  S.steps.forEach(s=>{const [ico,label]=maneuver(s),el=document.createElement("div");el.className="step";const a=document.createElement("div");a.className="stepIcon";a.textContent=ico;const b=document.createElement("div"),strong=document.createElement("b"),small=document.createElement("div");strong.textContent=label+(s.name?" onto "+s.name:"");small.className="muted";small.textContent=distText(s.distance||0)+" · "+timeText(s.duration||0);b.append(strong,small);el.append(a,b);box.appendChild(el)});
 }
 function updateStep(){
  if(!S.steps.length||!S.gps)return;
  for(let i=S.stepIndex;i<S.steps.length;i++){
-  const loc=S.steps[i].maneuver?.location;if(!loc)continue;
+  const loc=S.steps[i].maneuver&&S.steps[i].maneuver.location;if(!loc)continue;
   const d=dist(S.gps,[loc[1],loc[0]]);
   if(d>18||S.steps[i].maneuver.type==="arrive"){S.stepIndex=i;break}
   S.stepIndex=Math.min(i+1,S.steps.length-1);
@@ -402,8 +420,8 @@ function updateStep(){
 function updateNextTurn(){
  if(!S.live||!S.gps||!S.steps.length)return;
  updateStep();const s=S.steps[S.stepIndex];if(!s)return;
- const loc=s.maneuver?.location,d=loc?dist(S.gps,[loc[1],loc[0]]):s.distance||0,[ico,label]=maneuver(s);
- $("turnIcon").textContent=ico;$("turnDistance").textContent=s.maneuver?.type==="arrive"?"Destination":distText(d);$("turnType").textContent=label;$("turnRoad").textContent=s.name?"onto "+s.name:"";$("nextTurn").style.display="block";
+ const loc=s.maneuver&&s.maneuver.location,d=loc?dist(S.gps,[loc[1],loc[0]]):s.distance||0,[ico,label]=maneuver(s);
+ $("turnIcon").textContent=ico;$("turnDistance").textContent=s.maneuver.type==="arrive"?"Destination":distText(d);$("turnType").textContent=label;$("turnRoad").textContent=s.name?"onto "+s.name:"";$("nextTurn").style.display="block";
  if(S.voice&&S.spokenStep!==S.stepIndex&&d<120){S.spokenStep=S.stepIndex;if("speechSynthesis"in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(label+(s.name?" onto "+s.name:"")))}}
 }
 function updateNavInfo(){
@@ -412,9 +430,10 @@ function updateNavInfo(){
  if(S.gps&&S.coords.length){let left=0;for(let i=S.progress;i<S.coords.length-1;i++)left+=dist(S.coords[i],S.coords[i+1]);meters=left;remaining=S.route.duration*left/Math.max(1,S.route.distance)}
  $("etaValue").textContent=new Date(Date.now()+remaining*1000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});$("timeValue").textContent=timeText(remaining);$("distanceValue").textContent=distText(meters);
 }
+function saveStore(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){}}
 function saveHistory(a,b){
  S.history=[{from:a.label,to:b.label,lat:b.lat,lon:b.lon,time:Date.now()},...S.history.filter(x=>x.to!==b.label)].slice(0,20);
- localStorage.setItem("horizonmaps_history",JSON.stringify(S.history));
+ saveStore("horizonmaps_history",S.history);
 }
 async function navigate(){
  const dest=$("dest").value.trim();if(!dest){status("Enter a destination.",true);return}
@@ -422,7 +441,7 @@ async function navigate(){
  try{
   const a=await resolveOrigin(),b=await resolveDestination();S.origin=a;S.destination=b;
   S.routes=await getRoutes(a,b);S.routeMode="fastest";S.routeIndex=routeRank("fastest");S.route=S.routes[S.routeIndex];S.steps=stepsFor(S.route);S.stepIndex=0;S.progress=0;S.spokenStep=-1;
-  S.live=$("origin").value.trim()==="My current location"||!!S.gps;
+  S.live=a.label==="Your location";
   if(S.live){startGPS();S.following=true}
   $("searchPanel").style.display="none";
   $("directionsCancel").style.display="none";
@@ -430,7 +449,7 @@ async function navigate(){
   drawRoutes();renderRouteChoices();renderDirections();updateNavInfo();
   $("navInfo").style.display="flex";$("stopBtn").style.display="inline-block";$("nextTurn").style.display=S.live?"block":"none";
   saveHistory(a,b);status("Route ready · "+S.routes.length+" option"+(S.routes.length===1?"":"s"));
-  if(S.gps){updateProgress();updateNextTurn();S.following=S.live}
+  if(S.gps&&S.live){updateProgress();updateNextTurn()}
  }catch(e){status(e.message||"Could not create route.",true)}
  finally{$("routeBtn").disabled=false}
 }
@@ -439,6 +458,7 @@ function stopNavigation(){
  S.live=false;S.following=false;S.route=null;S.routes=[];S.steps=[];S.coords=[];S.progress=0;S.offRouteSince=0;
  $("searchPanel").style.display="";
  $("navInfo").style.display="none";$("nextTurn").style.display="none";$("stopBtn").style.display="none";
+ setBear(0);
  clearLines();if(S.destinationMarker){map.removeLayer(S.destinationMarker);S.destinationMarker=null}
  if("speechSynthesis"in window)speechSynthesis.cancel();status("Navigation stopped.");
 }
@@ -466,8 +486,8 @@ async function reroute(){
 }
 
 function loadStored(){
- try{S.history=JSON.parse(localStorage.getItem("horizonmaps_history")||"[]")}catch{}
- try{S.saved=JSON.parse(localStorage.getItem("horizonmaps_saved")||"[]")}catch{}
+ try{S.history=JSON.parse(localStorage.getItem("horizonmaps_history")||"[]")}catch(e){}
+ try{S.saved=JSON.parse(localStorage.getItem("horizonmaps_saved")||"[]")}catch(e){}
 }
 function showHistory(){
  const box=$("historyContent");box.innerHTML="";
@@ -478,24 +498,24 @@ function showHistory(){
   btn.onclick=()=>{$("dest").value=h.to;S.destination={lat:h.lat,lon:h.lon,label:h.to};$("history").style.display="none";navigate()};
   text.append(b,small);el.append(text,btn);box.append(el);
  });
- const clear=document.createElement("button");clear.className="btn danger";clear.textContent="Clear history";clear.onclick=()=>{S.history=[];localStorage.removeItem("horizonmaps_history");showHistory()};box.append(clear);
+ const clear=document.createElement("button");clear.className="btn danger";clear.style.marginTop="10px";clear.textContent="Clear history";clear.onclick=()=>{S.history=[];try{localStorage.removeItem("horizonmaps_history")}catch(e){}showHistory()};box.append(clear);
 }
 function showSaved(){
  const box=$("placesContent");box.innerHTML="";
  if(!S.saved.length){box.textContent="No saved places yet. Choose a destination and tap Save.";return}
  S.saved.forEach(p=>{
-  const el=document.createElement("div");el.className="placeItem";const name=document.createElement("b");name.textContent=p.label;
+  const el=document.createElement("div");el.className="placeItem";const name=document.createElement("b");name.textContent=p.label;name.style.flex="1";
   const go=document.createElement("button");go.className="btn";go.textContent="Route";go.onclick=()=>{$("dest").value=p.label;S.destination=p;$("places").style.display="none";navigate()};
-  const del=document.createElement("button");del.className="btn";del.textContent="Remove";del.onclick=()=>{S.saved=S.saved.filter(x=>x.label!==p.label);localStorage.setItem("horizonmaps_saved",JSON.stringify(S.saved));showSaved()};
+  const del=document.createElement("button");del.className="btn";del.textContent="Remove";del.onclick=()=>{S.saved=S.saved.filter(x=>x.label!==p.label);saveStore("horizonmaps_saved",S.saved);showSaved()};
   el.append(name,go,del);box.append(el);
  });
 }
-$("saveBtn").onclick=()=>{if(!S.destination){status("Find a destination first.",true);return}if(!S.saved.some(x=>x.label===S.destination.label))S.saved.push(S.destination);localStorage.setItem("horizonmaps_saved",JSON.stringify(S.saved));status("Place saved on this device.")};
+$("saveBtn").onclick=()=>{if(!S.destination){status("Find a destination first.",true);return}if(!S.saved.some(x=>x.label===S.destination.label))S.saved.push(S.destination);saveStore("horizonmaps_saved",S.saved);status("Place saved on this device.")};
 $("savedBtn").onclick=()=>{$("places").style.display="block";showSaved()};
 $("historyBtn").onclick=()=>{$("history").style.display="block";showHistory()};
 function closeDirections(){
  $("directions").style.display="none";
- $("searchPanel").style.display="";
+ $("searchPanel").style.display=S.live?"none":"";
  $("directionsCancel").style.display="none";
 }
 $("routesBtn").onclick=()=>{$("routeOptions").style.display="block";renderRouteChoices()};
@@ -507,8 +527,8 @@ $("directionsBtn").onclick=()=>{
  renderDirections();
 };
 $("directionsCancel").onclick=closeDirections;
-document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const id=b.dataset.close;$(id).style.display="none";if(id==="directions")closeDirections()});
-$("collapseBtn").onclick=()=>{$("searchPanel").classList.toggle("collapsed");$("collapseBtn").textContent=$("searchPanel").classList.contains("collapsed")?"+":"−"};
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const id=b.dataset.close;if(id==="directions")closeDirections();else $(id).style.display="none"});
+$("collapseBtn").onclick=()=>{$("searchPanel").classList.toggle("collapsed");$("collapseBtn").textContent=$("searchPanel").classList.contains("collapsed")?"+":"−";setTimeout(()=>map.invalidateSize(),50)};
 
 $("voiceBtn").onclick=()=>{S.voice=!S.voice;$("voiceBtn").textContent=S.voice?"🔊 Voice on":"🔇 Voice off";if(!S.voice&&"speechSynthesis"in window)speechSynthesis.cancel()};
 $("trafficBtn").onclick=()=>alert("Live traffic is not supplied by standard OpenStreetMap map tiles or OSRM. This version does not invent traffic conditions; a regional public feed or a traffic provider integration is required.");
@@ -522,7 +542,7 @@ async function nearby(){
   (data.elements||[]).forEach(p=>{
    const t=p.tags||{},name=t.name||t.amenity||t.shop||t.tourism||"Place",lat=p.lat,lon=p.lon;if(!lat||!lon)return;
    const el=document.createElement("div");el.className="placeItem";const info=document.createElement("div"),b=document.createElement("b"),small=document.createElement("div"),btn=document.createElement("button");
-   b.textContent=name;small.className="muted";small.textContent=[t.amenity,t.shop,t.tourism].filter(Boolean).join(" · ");btn.className="btn";btn.textContent="Show";btn.onclick=()=>map.flyTo([lat,lon],17);
+   b.textContent=name;small.className="muted";small.textContent=[t.amenity,t.shop,t.tourism].filter(Boolean).join(" · ");btn.className="btn";btn.textContent="Show";btn.onclick=()=>{S.following=false;map.flyTo([lat,lon],17)};
    info.append(b,small);el.append(info,btn);box.append(el);
   });
   if(!box.children.length)box.textContent="No nearby places found.";
